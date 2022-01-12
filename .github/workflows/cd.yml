@@ -19,7 +19,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.57.0
+          toolchain: nightly-2021-12-03
           target: "x86_64-unknown-linux-musl"
           override: true
       - uses: Swatinem/rust-cache@v1
@@ -44,7 +44,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.57.0
+          toolchain: nightly-2021-12-03
           target: "x86_64-pc-windows-gnu"
           override: true
       - uses: Swatinem/rust-cache@v1
@@ -69,7 +69,7 @@ jobs:
     - run: |
         export HOME=/root
         rustup update
-        rustup override set 1.57.0
+        rustup override set nightly-2021-12-03
         rustup target add x86_64-apple-darwin
         cargo update
         rm -rf massa/*
