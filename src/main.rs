@@ -1,13 +1,12 @@
 use anyhow::{bail, Result};
-use std::{env, fs, path::Path};
 use assembly_simulator::run;
+use std::{env, fs, path::Path};
 
+mod interface_impl;
 mod ledger_interface;
 mod types;
-mod interface_impl;
 
 fn read_files() -> Result<Vec<(String, Vec<u8>)>> {
-    // TODO: should be or use a read_files(filename: Path) -> String
     let args: Vec<String> = env::args().collect();
     let mut ret = vec![];
     #[allow(clippy::needless_range_loop)]
@@ -17,12 +16,12 @@ fn read_files() -> Result<Vec<(String, Vec<u8>)>> {
         if !path.is_file() {
             bail!("{} isn't file", name)
         }
-        // TODO: should also handle binary WASM file?!
         let extention = path.extension().unwrap_or_default();
-        if extention != "wat" && extention != "wasm" {
-            bail!("{} should be in webassembly", name)
+        if extention != "wasm" {
+            bail!("{} should be .wasm", name)
         }
-        ret.push((path.to_str().unwrap().to_string(), fs::read(path)?));
+        let bin = fs::read(path)?;
+        ret.push((path.to_str().unwrap().to_string(), bin));
     }
     Ok(ret)
 }

@@ -1,6 +1,6 @@
-use assembly_simulator::{Interface, InterfaceClone, Address, Bytecode};
-use anyhow::{bail, Result};
 use crate::ledger_interface::InterfaceImpl;
+use anyhow::{bail, Result};
+use assembly_simulator::{Address, Bytecode, Interface, InterfaceClone};
 use std::hash::Hasher;
 use wyhash::WyHash;
 
@@ -61,12 +61,7 @@ impl Interface for InterfaceImpl {
     ///
     /// Note:
     /// The execution lib will allways use the current context address for the update
-    fn set_data_for(
-        &self,
-        address: &Address,
-        key: &str,
-        value: &Bytecode,
-    ) -> Result<()> {
+    fn set_data_for(&self, address: &Address, key: &str, value: &Bytecode) -> Result<()> {
         let curr_address = self.call_stack_peek()?;
         if self.own(address)? || *address == curr_address {
             self.set_data_entry(address, key, value.clone())?;
@@ -105,8 +100,7 @@ impl Interface for InterfaceImpl {
         // debit
         self.sub(from_address, raw_amount)?;
         // credit
-        if let Err(err) = self.add(to_address, raw_amount)
-        {
+        if let Err(err) = self.add(to_address, raw_amount) {
             // cancel debit
             self.add(from_address, raw_amount)
                 .expect("credit failed after same-amount debit succeeded");
