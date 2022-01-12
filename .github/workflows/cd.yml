@@ -1,0 +1,111 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: "x86_64-unknown-linux-musl"
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - run: |
+          mkdir massa && cd massa
+          cp -v ../target/release/massa-sc-test .
+      - uses: actions/upload-artifact@v2
+        with:
+          name: release_linux
+          path: massa/
+
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: "x86_64-pc-windows-gnu"
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - run: |
+          mkdir massa && cd massa
+          cp -v ../target/release/massa-sc-test .
+      - uses: actions/upload-artifact@v2
+        with:
+          name: release_windows
+          path: massa/
+
+  macos:
+    runs-on: ubuntu-latest
+    container:
+      image: massalabs/linux-ci
+    steps:
+    - uses: actions/checkout@v2
+    - run: |
+        export HOME=/root
+        rustup update
+        rustup default nightly
+        rustup target add x86_64-apple-darwin
+        cargo update
+        rm -rf massa/*
+        mkdir massa
+        CC=o64-clang CXX=o64-clang++ cargo build --release --target x86_64-apple-darwin
+        cd massa
+        cp -v ../target/release/massa-sc-test .
+    - uses: actions/upload-artifact@v2
+      with:
+        name: release_macos
+        path: massa/
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [linux, windows, macos]
+    steps:
+    - uses: actions/download-artifact@v2.0.10
+      with:
+        name: release_macos
+        path: release_macos
+    - uses: actions/download-artifact@v2.0.10
+      with:
+        name: release_windows
+        path: release_windows
+    - uses: actions/download-artifact@v2.0.10
+      with:
+        name: release_linux
+        path: release_linux
+    - run: |
+        echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        tar -czvf massa_${RELEASE_VERSION}_linux.tar.gz release_linux
+        tar -czvf massa_${RELEASE_VERSION}_windows.tar.gz release_windows
+        tar -czvf massa_${RELEASE_VERSION}_macos.tar.gz release_macos
+    - uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          release_linux.tar.gz
+          release_darwin.tar.gz
+          release_windows.tar.gz
