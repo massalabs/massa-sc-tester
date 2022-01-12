@@ -28,6 +28,8 @@ jobs:
           command: build
           args: --release
       - run: |
+          rustup update
+          rustup override set 1.57.0
           mkdir massa && cd massa
           cp -v ../target/release/massa-sc-test .
       - uses: actions/upload-artifact@v2
@@ -53,6 +55,8 @@ jobs:
           command: build
           args: --release
       - run: |
+          rustup update
+          rustup override set 1.57.0
           mkdir massa && cd massa
           cp -v ../target/release/massa-sc-test .
       - uses: actions/upload-artifact@v2
@@ -69,7 +73,7 @@ jobs:
     - run: |
         export HOME=/root
         rustup update
-        rustup default nightly
+        rustup override set 1.57.0
         rustup target add x86_64-apple-darwin
         cargo update
         rm -rf massa/*
