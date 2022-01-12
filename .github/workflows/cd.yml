@@ -19,7 +19,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: 1.57.0
           target: "x86_64-unknown-linux-musl"
           override: true
       - uses: Swatinem/rust-cache@v1
@@ -28,8 +28,6 @@ jobs:
           command: build
           args: --release
       - run: |
-          rustup update
-          rustup override set 1.57.0
           mkdir massa && cd massa
           cp -v ../target/release/massa-sc-test .
       - uses: actions/upload-artifact@v2
@@ -46,7 +44,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: 1.57.0
           target: "x86_64-pc-windows-gnu"
           override: true
       - uses: Swatinem/rust-cache@v1
@@ -55,8 +53,6 @@ jobs:
           command: build
           args: --release
       - run: |
-          rustup update
-          rustup override set 1.57.0
           mkdir massa && cd massa
           cp -v ../target/release/massa-sc-test .
       - uses: actions/upload-artifact@v2
