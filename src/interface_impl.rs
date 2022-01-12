@@ -43,7 +43,7 @@ impl Interface for InterfaceImpl {
     /// operation index in the block and the index of address owned in context.
     ///
     /// Insert in the ledger the given bytecode in the generated address
-    fn create_module(&self, module: &Bytecode) -> Result<assembly_simulator::Address> {
+    fn create_module(&self, module: &Bytecode) -> Result<Address> {
         let mut gen = WyHash::with_seed(rand::random());
         gen.write(&[rand::random(), rand::random(), rand::random()]);
         let address = base64::encode(gen.finish().to_be_bytes());

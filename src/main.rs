@@ -34,7 +34,7 @@ fn main() -> Result<()> {
         println!("run {}", filename);
         println!(
             "remaining points: {}",
-            run(&module, 20000, &ledger_context)?
+            run(&module, 1_000_000_000_000, &ledger_context)?
         );
     }
     ledger_context.save()?;
