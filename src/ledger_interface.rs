@@ -3,7 +3,7 @@ const LEDGER_PATH: &str = "./ledger.json";
 use std::sync::{Arc, Mutex};
 
 use anyhow::{bail, Result};
-use assembly_simulator::{Address, Bytecode};
+use massa_sc_runtime::{Address, Bytecode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Deserialize, Serialize)]

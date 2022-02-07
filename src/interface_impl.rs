@@ -1,6 +1,6 @@
 use crate::ledger_interface::InterfaceImpl;
 use anyhow::{bail, Result};
-use assembly_simulator::{Address, Bytecode, Interface, InterfaceClone};
+use massa_sc_runtime::{Address, Bytecode, Interface, InterfaceClone};
 use std::hash::Hasher;
 use wyhash::WyHash;
 
@@ -16,7 +16,7 @@ impl Interface for InterfaceImpl {
         Ok(())
     }
 
-    fn get_module(&self, address: &String) -> Result<Vec<u8>> {
+    fn init_call(&self, address: &String, _raw_coins: u64) -> Result<Vec<u8>> {
         let entry = self.get_entry(address)?;
         self.call_stack_push(address.to_owned())?;
         entry.get_bytecode()
@@ -33,7 +33,7 @@ impl Interface for InterfaceImpl {
         Ok(self.get_entry(address)?.balance)
     }
 
-    fn exit_success(&self) -> Result<()> {
+    fn finish_call(&self) -> Result<()> {
         self.call_stack_pop()
     }
 
@@ -53,7 +53,7 @@ impl Interface for InterfaceImpl {
     }
 
     /// Requires the data at the address
-    fn get_data_for(&self, address: &Address, key: &str) -> Result<Bytecode> {
+    fn get_data_for(&self, address: &Address, key: &String) -> Result<Bytecode> {
         self.get(address)?.get_data(key)
     }
 
@@ -61,10 +61,10 @@ impl Interface for InterfaceImpl {
     ///
     /// Note:
     /// The execution lib will allways use the current context address for the update
-    fn set_data_for(&self, address: &Address, key: &str, value: &Bytecode) -> Result<()> {
+    fn set_data_for(&self, address: &Address, key: &String, value: &[u8]) -> Result<()> {
         let curr_address = self.call_stack_peek()?;
         if self.own(address)? || *address == curr_address {
-            self.set_data_entry(address, key, value.clone())?;
+            self.set_data_entry(address, key, value.to_vec())?;
             Ok(())
         } else {
             bail!("You don't have the write access to this entry")
@@ -75,8 +75,8 @@ impl Interface for InterfaceImpl {
         self.get(&self.call_stack_peek()?)?.get_data(key)
     }
 
-    fn set_data(&self, key: &str, value: &Bytecode) -> Result<()> {
-        self.set_data_entry(&self.call_stack_peek()?, key, value.clone())
+    fn set_data(&self, key: &str, value: &[u8]) -> Result<()> {
+        self.set_data_entry(&self.call_stack_peek()?, key, value.to_vec())
     }
 
     /// Transfer coins from the current address to a target address
@@ -110,11 +110,11 @@ impl Interface for InterfaceImpl {
     }
 
     /// Return the list of owned adresses of a given SC user
-    fn get_owned_addresses(&self) -> Result<Vec<assembly_simulator::Address>> {
+    fn get_owned_addresses(&self) -> Result<Vec<massa_sc_runtime::Address>> {
         self.owned_to_vec()
     }
 
-    fn get_call_stack(&self) -> Result<Vec<assembly_simulator::Address>> {
+    fn get_call_stack(&self) -> Result<Vec<massa_sc_runtime::Address>> {
         self.callstack_to_vec()
     }
 
