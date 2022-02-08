@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use assembly_simulator::run;
+use massa_sc_runtime::run;
 use std::{env, fs, path::Path};
 
 mod interface_impl;

@@ -36,31 +36,12 @@ checksum = "84450d0b4a8bd1ba4144ce8ce718fbc5d071358b1e5384bace6536b3d1f2d5b3"
 
 [[package]]
 name = "as-ffi-bindings"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9310e5caebea48afcb14dd116075a8338ffb4fd6800817641c67e82df8e36c28"
+checksum = "15db0128ed7ec121cb02540ed78a25a3d32930cd439ae732830938d1af4c4118"
 dependencies = [
  "anyhow",
  "wasmer",
-]
-
-[[package]]
-name = "assembly_simulator"
-version = "0.1.0"
-source = "git+https://github.com/massalabs/massa-sc-runtime?tag=v0.2.8#4f678f7191c79a17c6f4926d5f94d8927780ab20"
-dependencies = [
- "anyhow",
- "as-ffi-bindings",
- "base64",
- "cornetto",
- "lazy_static",
- "serde",
- "serde_json",
- "serial_test",
- "wasmer",
- "wasmer-compiler-singlepass",
- "wasmer-engine-universal",
- "wasmer-middlewares",
 ]
 
 [[package]]
@@ -540,12 +521,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "massa-sc-runtime"
+version = "0.3.0"
+source = "git+https://github.com/massalabs/massa-sc-runtime?tag=v0.4.1#2dd232195527a6bf71a9d12b2505b9b9e44ea207"
+dependencies = [
+ "anyhow",
+ "as-ffi-bindings",
+ "base64",
+ "cornetto",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "wasmer",
+ "wasmer-compiler-singlepass",
+ "wasmer-engine-universal",
+ "wasmer-middlewares",
+]
+
+[[package]]
 name = "massa-sc-test"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "assembly_simulator",
  "base64",
+ "massa-sc-runtime",
  "rand",
  "serde",
  "serde_json",
