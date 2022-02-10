@@ -18,6 +18,10 @@ impl Interface for InterfaceImpl {
 
     fn init_call(&self, address: &str, raw_coins: u64) -> Result<Vec<u8>> {
         let entry = self.get_entry(address)?;
+        let from_address = self.call_stack_peek()?.address;
+        if raw_coins > 0 {
+            self.transfer_coins_for(&from_address, address, raw_coins)?
+        }
         self.call_stack_push(crate::ledger_interface::CallItem {
             address: address.to_owned(),
             coins: raw_coins,
