@@ -48,12 +48,13 @@ impl Ledger {
         entry.bytecode = Some(module.to_vec());
         self.0.insert(address.to_owned(), entry);
     }
-    pub(crate) fn set_data_entry(&self, address: &str, key: String, value: Vec<u8>) {
+    pub(crate) fn set_data_entry(&mut self, address: &str, key: String, value: Vec<u8>) {
         let mut entry = match self.get(address) {
             Ok(entry) => entry,
             _ => Entry::default(),
         };
         entry.database.insert(key, value);
+        self.0.insert(address.to_owned(), entry);
     }
     pub(crate) fn sub(&mut self, address: &str, amount: u64) -> Result<()> {
         let entry = match self.get(address) {
@@ -164,7 +165,7 @@ impl InterfaceImpl {
     }
     pub(crate) fn set_data_entry(&self, address: &str, key: &str, value: Vec<u8>) -> Result<()> {
         match self.ledger.lock() {
-            Ok(ledger) => {
+            Ok(mut ledger) => {
                 ledger.set_data_entry(address, key.to_string(), value);
                 Ok(())
             }
