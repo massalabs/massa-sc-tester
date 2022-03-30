@@ -158,7 +158,7 @@ impl Interface for InterfaceImpl {
         _coins: u64,
         data: &[u8],
     ) -> Result<()> {
-       println!("Send message data: {:?}", data);
-       Ok(())
+        println!("Send message data: {:?}", data);
+        Ok(())
     }
 }
