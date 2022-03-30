@@ -146,4 +146,19 @@ impl Interface for InterfaceImpl {
     fn unsafe_random(&self) -> Result<i64> {
         Ok(rand::random())
     }
+
+    fn send_message(
+        &self,
+        _target_address: &str,
+        _target_handler: &str,
+        _validity_start: (u64, u8),
+        _validity_end: (u64, u8),
+        _max_gas: u64,
+        _gas_price: u64,
+        _coins: u64,
+        data: &[u8],
+    ) -> Result<()> {
+       println!("Send message data: {:?}", data);
+       Ok(())
+    }
 }
