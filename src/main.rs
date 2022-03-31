@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use massa_sc_runtime::run;
+use massa_sc_runtime::run_main;
 use std::{env, fs, path::Path};
 
 mod interface_impl;
@@ -34,7 +34,7 @@ fn main() -> Result<()> {
         println!("run {}", filename);
         println!(
             "remaining points: {}",
-            run(&module, 1_000_000_000_000, &ledger_context)?
+            run_main(&module, 1_000_000_000_000, &ledger_context)?
         );
     }
     ledger_context.save()?;
