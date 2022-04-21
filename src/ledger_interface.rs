@@ -95,6 +95,15 @@ pub(crate) struct CallItem {
     pub coins: u64,
 }
 
+impl CallItem {
+    pub(crate) fn address(address: &str) -> Self {
+        Self {
+            address: address.to_string(),
+            coins: 0,
+        }
+    }
+}
+
 #[derive(Clone, Default)]
 pub(crate) struct InterfaceImpl {
     ledger: Arc<Mutex<Ledger>>,
@@ -217,16 +226,18 @@ impl InterfaceImpl {
             Err(err) => bail!("Call sack err:\n{}", err),
         }
     }
-    pub(crate) fn _reset_addresses(&self) -> Result<()> {
+    pub(crate) fn reset_addresses(&self) -> Result<()> {
         match self.owned.lock() {
             Ok(mut owned) => {
                 owned.clear();
+                owned.push_back("sender".to_string());
             }
             Err(err) => bail!("Call sack err:\n{}", err),
         };
         match self.call_stack.lock() {
             Ok(mut call_stack) => {
                 call_stack.clear();
+                call_stack.push_back(CallItem::address("sender"));
             }
             Err(err) => bail!("Call sack err:\n{}", err),
         };

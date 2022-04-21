@@ -82,6 +82,7 @@ fn parse_arguments() -> Result<Arguments> {
 fn main() -> Result<()> {
     let args: Arguments = parse_arguments()?;
     let ledger_context = InterfaceImpl::new()?;
+    ledger_context.reset_addresses()?;
     if let Some(caller) = args.caller {
         ledger_context.call_stack_push(caller)?;
     }
