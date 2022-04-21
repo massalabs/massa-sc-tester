@@ -143,8 +143,26 @@ impl Interface for InterfaceImpl {
         Ok(String::from_utf8(key.to_vec())?)
     }
 
+    fn raw_set_bytecode_for(&self, address: &str, bytecode: &[u8]) -> Result<()> {
+        self.set_module(address, bytecode)?;
+        Ok(())
+    }
+
+    fn raw_set_bytecode(&self, bytecode: &[u8]) -> Result<()> {
+        self.set_module(&self.call_stack_peek()?.address, bytecode)?;
+        Ok(())
+    }
+
     fn unsafe_random(&self) -> Result<i64> {
         Ok(rand::random())
+    }
+
+    fn get_current_period(&self) -> Result<u64> {
+        Ok(0)
+    }
+
+    fn get_current_thread(&self) -> Result<u8> {
+        Ok(0)
     }
 
     fn send_message(
