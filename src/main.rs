@@ -1,25 +1,29 @@
 use anyhow::{bail, Result};
 use massa_sc_runtime::run_main;
-use std::{env, fs, path::Path};
+use std::{collections::HashMap, env, fs, path::Path};
 
 mod interface_impl;
 mod ledger_interface;
 mod types;
 
+use ledger_interface::{CallItem, InterfaceImpl};
+
 pub struct Arguments {
     filename: String,
     module: Vec<u8>,
     function: Option<String>,
-    caller: Option<ledger_interface::CallItem>,
+    caller: Option<CallItem>,
 }
 
-fn read_arguments() -> Result<Arguments> {
+fn parse_arguments() -> Result<Arguments> {
+    // collect the arguments
     let args: Vec<String> = env::args().collect();
     let len = args.len();
     println!("{}", len);
     if !(2..=5).contains(&len) {
         bail!("invalid number of arguments")
     }
+
     // parse the file
     let name = args[1].clone();
     let path = Path::new(&name);
@@ -31,17 +35,35 @@ fn read_arguments() -> Result<Arguments> {
         bail!("{} should be .wasm", name)
     }
     let bin = fs::read(path)?;
+
+    // parse the configuration parameters
+    let p_list: [&str; 3] = ["function", "sender_address", "coins"];
+    let mut p: HashMap<String, String> = HashMap::new();
+    for v in args.iter().skip(2) {
+        let s: Vec<&str> = v.split('=').collect();
+        if s.len() == 2 && p_list.contains(&s[0]) {
+            p.insert(s[0].to_string(), s[1].to_string());
+        } else {
+            bail!("invalid parameter");
+        }
+    }
+
+    // return parsed arguments
     Ok(Arguments {
         filename: path.to_str().unwrap().to_string(),
         module: bin,
-        function: None,
-        caller: None,
+        function: p.get_key_value("function"),
+        caller: match (p.get_key_value("sender_address"), p.get_key_value("coins")) {
+            (Some(address), Some(coins)) => Some(CallItem { address, coins }),
+            (Some(address), None) => Some(CallItem { address, coins: 0 }),
+            (None, None) => None,
+        },
     })
 }
 
 fn main() -> Result<()> {
-    let args: Arguments = read_arguments()?;
-    let ledger_context = ledger_interface::InterfaceImpl::new()?;
+    let args: Arguments = parse_arguments()?;
+    let ledger_context = InterfaceImpl::new()?;
     ledger_context.reset_addresses()?;
     println!("run {}", args.filename);
     println!(
