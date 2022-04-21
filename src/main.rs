@@ -52,11 +52,17 @@ fn parse_arguments() -> Result<Arguments> {
     Ok(Arguments {
         filename: path.to_str().unwrap().to_string(),
         module: bin,
-        function: p.get_key_value("function"),
-        caller: match (p.get_key_value("sender_address"), p.get_key_value("coins")) {
-            (Some(address), Some(coins)) => Some(CallItem { address, coins }),
+        function: p.get_key_value("function").map(|x| x.1.clone()),
+        caller: match (
+            p.get_key_value("sender_address").map(|x| x.1.clone()),
+            p.get_key_value("coins").map(|x| x.1.clone()),
+        ) {
+            (Some(address), Some(coins)) if coins.parse::<u64>().is_ok() => Some(CallItem {
+                address,
+                coins: coins.parse::<u64>().unwrap(),
+            }),
             (Some(address), None) => Some(CallItem { address, coins: 0 }),
-            (None, None) => None,
+            _ => None,
         },
     })
 }
