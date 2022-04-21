@@ -25,7 +25,7 @@ param={function_param}
 
 addr={caller_address}
 
-coins={caller_coins} // default value '0'
+coins={caller_raw_coins} // default value '0', 1 raw_coin = 1e-9 coin
 ```
 
 Example:
