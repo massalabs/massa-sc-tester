@@ -57,9 +57,14 @@ fn parse_arguments() -> Result<Arguments> {
             p.get_key_value("sender_address").map(|x| x.1.clone()),
             p.get_key_value("coins").map(|x| x.1.clone()),
         ) {
-            (Some(address), Some(coins)) if coins.parse::<u64>().is_ok() => Some(CallItem {
+            (Some(address), Some(coins)) => Some(CallItem {
                 address,
-                coins: coins.parse::<u64>().unwrap(),
+                coins: if let Ok(coins) = coins.parse::<u64>() {
+                    coins
+                } else {
+                    println!("invalid coins, will be set to 0");
+                    0
+                },
             }),
             (Some(address), None) => Some(CallItem { address, coins: 0 }),
             _ => None,
