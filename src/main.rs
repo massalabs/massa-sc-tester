@@ -40,11 +40,15 @@ fn parse_arguments() -> Result<Arguments> {
     let p_list: [&str; 4] = ["function", "param", "addr", "coins"];
     let mut p: HashMap<String, String> = HashMap::new();
     for v in args.iter().skip(2) {
-        let s: Vec<&str> = v.split('=').collect();
-        if s.len() == 2 && p_list.contains(&s[0]) {
-            p.insert(s[0].to_string(), s[1].to_string());
+        if let Some(index) = v.find('=') {
+            let s: (&str, &str) = v.split_at(index);
+            if p_list.contains(&s.0) {
+                p.insert(s.0.to_string(), s.1.to_string());
+            } else {
+                bail!("this option does not exist");
+            }
         } else {
-            bail!("invalid parameter");
+            bail!("invalid option format");
         }
     }
 
