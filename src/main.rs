@@ -43,7 +43,7 @@ fn parse_arguments() -> Result<Arguments> {
         if let Some(index) = v.find('=') {
             let s: (&str, &str) = v.split_at(index);
             if p_list.contains(&s.0) {
-                p.insert(s.0.to_string(), s.1.to_string());
+                p.insert(s.0.to_string(), s.1[1..].to_string());
             } else {
                 bail!("this option does not exist");
             }
