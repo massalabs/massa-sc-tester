@@ -1,110 +1,72 @@
-use anyhow::{bail, Result};
-use massa_sc_runtime::{run_function, run_main};
-use std::{collections::HashMap, env, fs, path::Path};
-
 mod interface_impl;
 mod ledger_interface;
 mod types;
 
+use anyhow::{bail, Result};
 use ledger_interface::{CallItem, InterfaceImpl};
+use massa_sc_runtime::{run_function, run_main};
+use std::{fs, path::Path};
+use structopt::StructOpt;
 
-pub struct Arguments {
-    filename: String,
-    module: Vec<u8>,
-    function: Option<(String, String)>,
-    caller: Option<CallItem>,
+#[derive(StructOpt)]
+struct Arguments {
+    /// Path to the smart contract
+    path: String,
+    /// Function of the smart contract to be tested, default is 'main'
+    #[structopt(short = "f", long = "function")]
+    function: Option<String>,
+    /// Parameter of the given function
+    #[structopt(short = "p", long = "parameter")]
+    parameter: Option<String>,
+    /// Address called
+    #[structopt(short = "a", long = "address")]
+    address: Option<String>,
+    /// Raw coins sent by the caller, default is '0', 1 raw_coin = 1e-9 coin
+    #[structopt(short = "c", long = "coins")]
+    coins: Option<u64>,
 }
 
-fn parse_arguments() -> Result<Arguments> {
-    // collect the arguments
-    let args: Vec<String> = env::args().collect();
-    let len = args.len();
-    println!("{}", len);
-    if !(2..=5).contains(&len) {
-        bail!("invalid number of arguments")
+#[paw::main]
+fn main(args: Arguments) -> Result<()> {
+    // init the context
+    let ledger_context = InterfaceImpl::new()?;
+    ledger_context.reset_addresses()?;
+    if let Some(address) = args.address {
+        ledger_context.call_stack_push(CallItem {
+            address,
+            coins: args.coins.unwrap_or_default(),
+        })?;
     }
 
     // parse the file
-    let name = args[1].clone();
-    let path = Path::new(&name);
+    let path = Path::new(&args.path);
     if !path.is_file() {
-        bail!("{} isn't file", name)
+        bail!("{} isn't a file", args.path)
     }
     let extension = path.extension().unwrap_or_default();
     if extension != "wasm" {
-        bail!("{} should be .wasm", name)
+        bail!("{} extension should be .wasm", args.path)
     }
-    let bin = fs::read(path)?;
+    let module = fs::read(path)?;
+    println!("run {}", args.path);
 
-    // parse the configuration parameters
-    let p_list: [&str; 4] = ["function", "param", "addr", "coins"];
-    let mut p: HashMap<String, String> = HashMap::new();
-    for v in args.iter().skip(2) {
-        if let Some(index) = v.find('=') {
-            let s: (&str, &str) = v.split_at(index);
-            if p_list.contains(&s.0) {
-                p.insert(s.0.to_string(), s.1[1..].to_string());
-            } else {
-                bail!("this option does not exist");
-            }
-        } else {
-            bail!("invalid option format");
-        }
-    }
-
-    // return parsed arguments
-    Ok(Arguments {
-        filename: path.to_str().unwrap().to_string(),
-        module: bin,
-        function: match (
-            p.get_key_value("function").map(|x| x.1.clone()),
-            p.get_key_value("param").map(|x| x.1.clone()),
-        ) {
-            (Some(function), Some(param)) => Some((function, param)),
-            (Some(function), None) => Some((function, "".to_string())),
-            _ => None,
-        },
-        caller: match (
-            p.get_key_value("addr").map(|x| x.1.clone()),
-            p.get_key_value("coins").map(|x| x.1.clone()),
-        ) {
-            (Some(address), Some(coins)) => Some(CallItem {
-                address,
-                coins: if let Ok(coins) = coins.parse::<u64>() {
-                    coins
-                } else {
-                    println!("invalid coins, will be set to 0");
-                    0
-                },
-            }),
-            (Some(address), None) => Some(CallItem { address, coins: 0 }),
-            _ => None,
-        },
-    })
-}
-
-fn main() -> Result<()> {
-    let args: Arguments = parse_arguments()?;
-    let ledger_context = InterfaceImpl::new()?;
-    ledger_context.reset_addresses()?;
-    if let Some(caller) = args.caller {
-        ledger_context.call_stack_push(caller)?;
-    }
-    println!("run {}", args.filename);
+    // launch the tester
     println!(
         "remaining points: {}",
-        if let Some((name, param)) = args.function {
+        if let Some(function) = args.function {
             run_function(
-                &args.module,
+                &module,
                 1_000_000_000_000,
-                &name,
-                &param,
+                &function,
+                &args.parameter.unwrap_or_default(),
                 &ledger_context,
             )?
         } else {
-            run_main(&args.module, 1_000_000_000_000, &ledger_context)?
+            run_main(&module, 1_000_000_000_000, &ledger_context)?
         }
     );
+
+    // save the ledger
     ledger_context.save()?;
     Ok(())
 }
