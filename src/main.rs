@@ -1,7 +1,9 @@
 mod execution_context;
 mod interface_impl;
 
+use crate::execution_context::AsyncMessage;
 use anyhow::{bail, Result};
+use colored::Colorize;
 use execution_context::{CallItem, ExecutionContext, Slot};
 use indexmap::IndexMap;
 use massa_sc_runtime::{run_function, run_main};
@@ -9,7 +11,26 @@ use serde::Deserialize;
 use std::{fs, path::Path};
 use structopt::StructOpt;
 
-use crate::execution_context::AsyncMessage;
+macro_rules! step_runner {
+    ($($arg:tt)+) => {
+        print!("{} ", "STEP RUNNER".bold().yellow());
+        println!($($arg)+);
+    };
+}
+
+macro_rules! sc_runner {
+    ($($arg:tt)+) => {
+        print!("{} ", "SC RUNNER".bold().green());
+        println!($($arg)+);
+    };
+}
+
+macro_rules! message_runner {
+    ($($arg:tt)+) => {
+        print!("{} ", "MESSAGE RUNNER".bold().blue());
+        println!($($arg)+);
+    };
+}
 
 #[derive(Debug, Deserialize)]
 struct StepArguments {
@@ -52,20 +73,29 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
     let module = fs::read(path)?;
 
     // run the function
-    println!(
-        "remaining points: {}",
-        if let Some(function) = args.function {
-            run_function(
-                &module,
-                args.gas,
-                &function,
-                &args.parameter.unwrap_or_default(),
-                exec_context,
-            )?
-        } else {
-            run_main(&module, args.gas, exec_context)?
-        }
-    );
+    if let Some(function) = args.function {
+        sc_runner!("execute {}", function);
+        let remaining_gas = run_function(
+            &module,
+            args.gas,
+            &function,
+            &args.parameter.unwrap_or_default(),
+            exec_context,
+        )?;
+        sc_runner!(
+            "{} execution was successful, remaining gas is {}",
+            function,
+            remaining_gas
+        );
+    } else {
+        sc_runner!("execute {}", "main");
+        let remaining_gas = run_main(&module, args.gas, exec_context)?;
+        sc_runner!(
+            "{} execution was successful, remaining gas is {}",
+            "main",
+            remaining_gas
+        );
+    }
 
     // run the asynchronous messages
     for AsyncMessage {
@@ -86,13 +116,19 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
             address: target_address,
             coins,
         })?;
-        run_function(
+        message_runner!("execute {}", target_handler);
+        let remaining_gas = run_function(
             &bytecode,
             gas,
             &target_handler,
             std::str::from_utf8(&data)?,
             exec_context,
         )?;
+        message_runner!(
+            "{} execution was successful, remaining gas is {}",
+            target_handler,
+            remaining_gas
+        );
     }
 
     // save the ledger
@@ -125,9 +161,9 @@ fn main(args: CommandArguments) -> Result<()> {
 
     // execute the steps
     for (step_name, step) in executions_steps {
-        println!("start {} execution", step_name);
+        step_runner!("execute {}", step_name);
         execute_step(&mut exec_context, step)?;
-        println!("{} execution was successful", step_name)
+        step_runner!("{} was successful", step_name);
     }
     Ok(())
 }

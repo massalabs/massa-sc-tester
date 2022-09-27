@@ -1,9 +1,17 @@
 use crate::execution_context::{AsyncMessage, ExecutionContext, Slot};
 
 use anyhow::{bail, Result};
+use colored::Colorize;
 use massa_sc_runtime::{Interface, InterfaceClone};
 use std::hash::Hasher;
 use wyhash::WyHash;
+
+macro_rules! abi {
+    ($($arg:tt)+) => {
+        print!("{} ", "ABI".bold().purple());
+        println!($($arg)+);
+    };
+}
 
 impl InterfaceClone for ExecutionContext {
     fn clone_box(&self) -> Box<dyn Interface> {
@@ -13,7 +21,7 @@ impl InterfaceClone for ExecutionContext {
 
 impl Interface for ExecutionContext {
     fn print(&self, message: &str) -> Result<()> {
-        println!("SC print: {}", message);
+        abi!("print: {}", message);
         Ok(())
     }
 
@@ -27,21 +35,29 @@ impl Interface for ExecutionContext {
             address: address.to_owned(),
             coins: raw_coins,
         })?;
-        entry.get_bytecode()
+        let bytecode = entry.get_bytecode();
+        abi!("init_call: {:?}", bytecode);
+        bytecode
     }
 
     /// Returns zero as a default if address not found.
     fn get_balance(&self) -> Result<u64> {
         let address = &self.call_stack_peek()?.address;
-        Ok(self.get_entry(address)?.balance)
+        let balance = self.get_entry(address)?.balance;
+        abi!("get_balance: {}", balance);
+        Ok(balance)
     }
 
     /// Returns zero as a default if address not found.
     fn get_balance_for(&self, address: &str) -> Result<u64> {
-        Ok(self.get_entry(address)?.balance)
+        let balance = self.get_entry(address)?.balance;
+        abi!("get_balance_for: {}", balance);
+        Ok(balance)
     }
 
+    /// Pops the last element of the call stack
     fn finish_call(&self) -> Result<()> {
+        abi!("finish_call");
         self.call_stack_pop()
     }
 
@@ -57,12 +73,15 @@ impl Interface for ExecutionContext {
         let address = base64::encode(gen.finish().to_be_bytes());
         self.set_module(&address, module)?;
         self.own_insert(&address)?;
+        abi!("create_module: {}", address);
         Ok(address)
     }
 
     /// Requires the data at the address
     fn raw_get_data_for(&self, address: &str, key: &str) -> Result<Vec<u8>> {
-        self.get(address)?.get_data(key)
+        let data = self.get(address)?.get_data(key)?;
+        abi!("raw_get_data_for input: {:?}", data);
+        Ok(data)
     }
 
     /// Requires to replace the data in the current address
@@ -127,7 +146,7 @@ impl Interface for ExecutionContext {
     }
 
     fn generate_event(&self, data: String) -> Result<()> {
-        println!("Event sent: {}", data);
+        abi!("generate_event: {}", data);
         Ok(())
     }
 
@@ -140,29 +159,36 @@ impl Interface for ExecutionContext {
     }
 
     fn hash(&self, key: &[u8]) -> Result<String> {
-        println!("Info: hashing will produce a different value than the real node.");
-        Ok(String::from_utf8(key.to_vec())?)
+        let hash = String::from_utf8(key.to_vec())?;
+        abi!("hash: {}", hash);
+        Ok(hash)
     }
 
     fn raw_set_bytecode_for(&self, address: &str, bytecode: &[u8]) -> Result<()> {
+        abi!("raw_set_bytecode_for");
         self.set_module(address, bytecode)?;
         Ok(())
     }
 
     fn raw_set_bytecode(&self, bytecode: &[u8]) -> Result<()> {
+        abi!("raw_set_bytecode");
         self.set_module(&self.call_stack_peek()?.address, bytecode)?;
         Ok(())
     }
 
     fn unsafe_random(&self) -> Result<i64> {
-        Ok(rand::random())
+        let rand = rand::random();
+        abi!("unsafe_random: {}", rand);
+        Ok(rand)
     }
 
     fn get_current_period(&self) -> Result<u64> {
+        abi!("get_current_period: {}", self.execution_slot.period);
         Ok(self.execution_slot.period)
     }
 
     fn get_current_thread(&self) -> Result<u8> {
+        abi!("get_current_thread: {}", self.execution_slot.thread);
         Ok(self.execution_slot.thread)
     }
 
@@ -177,7 +203,8 @@ impl Interface for ExecutionContext {
         coins: u64,
         data: &[u8],
     ) -> Result<()> {
-        println!("Sent message data: {:?}", data);
+        let handler_arg = std::str::from_utf8(&data)?;
+        abi!("send_message: {}", handler_arg);
         self.push_async_message(
             Slot {
                 period: validity_start.0,
