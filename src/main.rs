@@ -1,9 +1,9 @@
+mod execution_context;
 mod interface_impl;
-mod ledger_interface;
 
 use anyhow::{bail, Result};
+use execution_context::{CallItem, ExecutionContext, Slot};
 use indexmap::IndexMap;
-use ledger_interface::{CallItem, InterfaceImpl, Slot};
 use massa_sc_runtime::{run_function, run_main};
 use serde::Deserialize;
 use std::{fs, path::Path};
@@ -29,7 +29,7 @@ struct StepArguments {
 
 fn execute_step(args: StepArguments) -> Result<()> {
     // init the context
-    let ledger_context = InterfaceImpl::new(args.slot.unwrap_or_default())?;
+    let ledger_context = ExecutionContext::new(args.slot.unwrap_or_default())?;
     ledger_context.reset_addresses()?;
     if let Some(address) = args.address {
         ledger_context.call_stack_push(CallItem {

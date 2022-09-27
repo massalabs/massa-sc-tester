@@ -2,7 +2,11 @@ const LEDGER_PATH: &str = "./ledger.json";
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::{
+    cmp::Ordering,
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Entry {
@@ -103,23 +107,45 @@ impl CallItem {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, Deserialize, PartialEq, Eq)]
 pub struct Slot {
     pub period: u64,
     pub thread: u8,
 }
 
+impl PartialOrd for Slot {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        (self.period, self.thread).partial_cmp(&(other.period, other.thread))
+    }
+}
+
+impl Ord for Slot {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.period, self.thread).cmp(&(other.period, other.thread))
+    }
+}
+
+#[derive(Clone)]
+pub struct AsyncMessage {
+    pub target_address: String,
+    pub target_handler: String,
+    pub gas: u64,
+    pub coins: u64,
+    pub data: Vec<u8>,
+}
+
 #[derive(Clone, Default)]
-pub(crate) struct InterfaceImpl {
+pub(crate) struct ExecutionContext {
     ledger: Arc<Mutex<Ledger>>,
     call_stack: Arc<Mutex<std::collections::VecDeque<CallItem>>>,
     owned: Arc<Mutex<std::collections::VecDeque<String>>>,
+    pub async_pool: BTreeMap<Slot, Vec<AsyncMessage>>,
     pub execution_slot: Slot,
 }
 
-impl InterfaceImpl {
-    pub(crate) fn new(slot: Slot) -> Result<InterfaceImpl> {
-        let mut ret = InterfaceImpl::default();
+impl ExecutionContext {
+    pub(crate) fn new(slot: Slot) -> Result<ExecutionContext> {
+        let mut ret = ExecutionContext::default();
         if let Ok(file) = std::fs::File::open("./ledger.json") {
             let reader = std::io::BufReader::new(file);
             ret.ledger = serde_json::from_reader(reader)?;

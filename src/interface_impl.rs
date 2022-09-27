@@ -1,17 +1,17 @@
-use crate::ledger_interface::InterfaceImpl;
+use crate::execution_context::{AsyncMessage, ExecutionContext, Slot};
 
 use anyhow::{bail, Result};
 use massa_sc_runtime::{Interface, InterfaceClone};
 use std::hash::Hasher;
 use wyhash::WyHash;
 
-impl InterfaceClone for InterfaceImpl {
+impl InterfaceClone for ExecutionContext {
     fn clone_box(&self) -> Box<dyn Interface> {
         Box::new(self.clone())
     }
 }
 
-impl Interface for InterfaceImpl {
+impl Interface for ExecutionContext {
     fn print(&self, message: &str) -> Result<()> {
         println!("SC print: {}", message);
         Ok(())
@@ -23,7 +23,7 @@ impl Interface for InterfaceImpl {
         if raw_coins > 0 {
             self.transfer_coins_for(&from_address, address, raw_coins)?
         }
-        self.call_stack_push(crate::ledger_interface::CallItem {
+        self.call_stack_push(crate::execution_context::CallItem {
             address: address.to_owned(),
             coins: raw_coins,
         })?;
@@ -167,17 +167,31 @@ impl Interface for InterfaceImpl {
     }
 
     fn send_message(
-        &self,
-        _target_address: &str,
-        _target_handler: &str,
-        _validity_start: (u64, u8),
+        &mut self,
+        target_address: &str,
+        target_handler: &str,
+        validity_start: (u64, u8),
         _validity_end: (u64, u8),
-        _max_gas: u64,
+        max_gas: u64,
         _gas_price: u64,
-        _coins: u64,
+        coins: u64,
         data: &[u8],
     ) -> Result<()> {
         println!("Sent message data: {:?}", data);
+        self.async_pool
+            .entry(Slot {
+                period: validity_start.0,
+                thread: validity_start.1,
+            })
+            .and_modify(|list| {
+                list.push(AsyncMessage {
+                    target_address: target_address.to_string(),
+                    target_handler: target_handler.to_string(),
+                    gas: max_gas,
+                    coins,
+                    data: data.to_vec(),
+                })
+            });
         Ok(())
     }
 }
