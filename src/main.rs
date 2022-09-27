@@ -74,15 +74,17 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
         gas,
         coins,
         data,
-    } in exec_context.get_async_messages_to_execute().unwrap()
+    } in exec_context.get_async_messages_to_execute()?
     {
-        let bytecode = exec_context
-            .get_entry(&target_address)
-            .unwrap()
-            .get_bytecode()
-            .unwrap();
-        // TODO: SETUP CONTEXT AND SEND ARG
-        run_function(&bytecode, gas, &target_handler, data, exec_context);
+        let bytecode = exec_context.get_entry(&target_address)?.get_bytecode()?;
+        // TODO: setup context with coins use
+        run_function(
+            &bytecode,
+            gas,
+            &target_handler,
+            std::str::from_utf8(&data)?,
+            exec_context,
+        )?;
     }
 
     // save the ledger
