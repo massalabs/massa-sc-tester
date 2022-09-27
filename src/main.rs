@@ -9,6 +9,8 @@ use serde::Deserialize;
 use std::{fs, path::Path};
 use structopt::StructOpt;
 
+use crate::execution_context::AsyncMessage;
+
 #[derive(Debug, Deserialize)]
 struct StepArguments {
     /// Path to the smart contract
@@ -24,19 +26,19 @@ struct StepArguments {
     /// Raw coins sent by the caller, default is '0', 1 raw_coin = 1e-9 coin
     coins: Option<u64>,
     /// Execution slot
-    slot: Option<Slot>,
+    slot: Slot,
 }
 
-fn execute_step(args: StepArguments) -> Result<()> {
-    // init the context
-    let ledger_context = ExecutionContext::new(args.slot.unwrap_or_default())?;
-    ledger_context.reset_addresses()?;
+fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Result<()> {
+    // init the context for this step
+    exec_context.reset_addresses()?;
     if let Some(address) = args.address {
-        ledger_context.call_stack_push(CallItem {
+        exec_context.call_stack_push(CallItem {
             address,
             coins: args.coins.unwrap_or_default(),
         })?;
     }
+    exec_context.execution_slot = args.slot;
 
     // read the wasm file
     let path = Path::new(&args.path);
@@ -58,15 +60,33 @@ fn execute_step(args: StepArguments) -> Result<()> {
                 args.gas,
                 &function,
                 &args.parameter.unwrap_or_default(),
-                &ledger_context,
+                exec_context,
             )?
         } else {
-            run_main(&module, args.gas, &ledger_context)?
+            run_main(&module, args.gas, exec_context)?
         }
     );
 
+    // run the asynchronous messages
+    for AsyncMessage {
+        target_address,
+        target_handler,
+        gas,
+        coins,
+        data,
+    } in exec_context.get_async_messages_to_execute().unwrap()
+    {
+        let bytecode = exec_context
+            .get_entry(&target_address)
+            .unwrap()
+            .get_bytecode()
+            .unwrap();
+        // TODO: SETUP CONTEXT AND SEND ARG
+        run_function(&bytecode, gas, &target_handler, data, exec_context);
+    }
+
     // save the ledger
-    ledger_context.save()?;
+    exec_context.save()?;
     Ok(())
 }
 
@@ -78,6 +98,9 @@ struct CommandArguments {
 
 #[paw::main]
 fn main(args: CommandArguments) -> Result<()> {
+    // create the context
+    let mut exec_context = ExecutionContext::new()?;
+
     // parse the config file
     let path = Path::new(&args.config_path);
     if !path.is_file() {
@@ -93,7 +116,7 @@ fn main(args: CommandArguments) -> Result<()> {
     // execute the steps
     for (step_name, step) in executions_steps {
         println!("start {} execution", step_name);
-        execute_step(step)?;
+        execute_step(&mut exec_context, step)?;
         println!("{} execution was successful", step_name)
     }
     Ok(())

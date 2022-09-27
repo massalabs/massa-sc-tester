@@ -125,7 +125,7 @@ impl Ord for Slot {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AsyncMessage {
     pub target_address: String,
     pub target_handler: String,
@@ -146,13 +146,12 @@ pub(crate) struct ExecutionContext {
 }
 
 impl ExecutionContext {
-    pub(crate) fn new(slot: Slot) -> Result<ExecutionContext> {
+    pub(crate) fn new() -> Result<ExecutionContext> {
         let mut ret = ExecutionContext::default();
         if let Ok(file) = std::fs::File::open(LEDGER_PATH) {
             let reader = std::io::BufReader::new(file);
             ret.ledger = serde_json::from_reader(reader)?;
         }
-        ret.execution_slot = slot;
         Ok(ret)
     }
     pub(crate) fn get_entry(&self, address: &str) -> Result<Entry> {
@@ -288,5 +287,21 @@ impl ExecutionContext {
             Err(err) => bail!("Async pool error: {}", err),
         }
         Ok(())
+    }
+    pub(crate) fn get_async_messages_to_execute(&self) -> Result<Vec<AsyncMessage>> {
+        match self.async_pool.lock() {
+            Ok(async_pool) => Ok(async_pool
+                .iter()
+                .filter_map(|(&slot, list)| {
+                    if slot <= self.execution_slot {
+                        Some(list.clone())
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect()),
+            Err(err) => bail!("Async pool error: {}", err),
+        }
     }
 }
