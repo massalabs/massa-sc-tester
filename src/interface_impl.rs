@@ -167,7 +167,7 @@ impl Interface for ExecutionContext {
     }
 
     fn send_message(
-        &mut self,
+        &self,
         target_address: &str,
         target_handler: &str,
         validity_start: (u64, u8),
@@ -178,20 +178,19 @@ impl Interface for ExecutionContext {
         data: &[u8],
     ) -> Result<()> {
         println!("Sent message data: {:?}", data);
-        self.async_pool
-            .entry(Slot {
+        self.push_async_message(
+            Slot {
                 period: validity_start.0,
                 thread: validity_start.1,
-            })
-            .and_modify(|list| {
-                list.push(AsyncMessage {
-                    target_address: target_address.to_string(),
-                    target_handler: target_handler.to_string(),
-                    gas: max_gas,
-                    coins,
-                    data: data.to_vec(),
-                })
-            });
+            },
+            AsyncMessage {
+                target_address: target_address.to_string(),
+                target_handler: target_handler.to_string(),
+                gas: max_gas,
+                coins,
+                data: data.to_vec(),
+            },
+        );
         Ok(())
     }
 }

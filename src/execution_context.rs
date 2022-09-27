@@ -134,19 +134,21 @@ pub struct AsyncMessage {
     pub data: Vec<u8>,
 }
 
+type AsyncPool = BTreeMap<Slot, Vec<AsyncMessage>>;
+
 #[derive(Clone, Default)]
 pub(crate) struct ExecutionContext {
     ledger: Arc<Mutex<Ledger>>,
     call_stack: Arc<Mutex<std::collections::VecDeque<CallItem>>>,
     owned: Arc<Mutex<std::collections::VecDeque<String>>>,
-    pub async_pool: BTreeMap<Slot, Vec<AsyncMessage>>,
+    async_pool: Arc<Mutex<AsyncPool>>,
     pub execution_slot: Slot,
 }
 
 impl ExecutionContext {
     pub(crate) fn new(slot: Slot) -> Result<ExecutionContext> {
         let mut ret = ExecutionContext::default();
-        if let Ok(file) = std::fs::File::open("./ledger.json") {
+        if let Ok(file) = std::fs::File::open(LEDGER_PATH) {
             let reader = std::io::BufReader::new(file);
             ret.ledger = serde_json::from_reader(reader)?;
         }
@@ -172,18 +174,18 @@ impl ExecutionContext {
                 cs.push_back(item);
                 Ok(())
             }
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         }
     }
     pub(crate) fn call_stack_pop(&self) -> Result<()> {
         match self.call_stack.lock() {
             Ok(mut cs) => {
                 if cs.pop_back().is_none() {
-                    bail!("Call sack err:\npop failed")
+                    bail!("Call stack err:\npop failed")
                 }
                 Ok(())
             }
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         }
     }
     pub(crate) fn call_stack_peek(&self) -> Result<CallItem> {
@@ -234,19 +236,19 @@ impl ExecutionContext {
     pub(crate) fn callstack_to_vec(&self) -> Result<Vec<String>> {
         match self.call_stack.lock() {
             Ok(cs) => Ok(cs.iter().map(|item| item.address.to_owned()).collect()),
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         }
     }
     pub(crate) fn owned_to_vec(&self) -> Result<Vec<String>> {
         match self.owned.lock() {
             Ok(owned) => Ok(owned.clone().into()),
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         }
     }
     pub(crate) fn own(&self, address: &str) -> Result<bool> {
         match self.owned.lock() {
             Ok(owned) => Ok(owned.contains(&address.to_owned())),
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         }
     }
     pub(crate) fn own_insert(&self, address: &str) -> Result<()> {
@@ -255,7 +257,7 @@ impl ExecutionContext {
                 owned.push_back(address.to_string());
                 Ok(())
             }
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         }
     }
     pub(crate) fn reset_addresses(&self) -> Result<()> {
@@ -264,15 +266,24 @@ impl ExecutionContext {
                 owned.clear();
                 owned.push_back("sender".to_string());
             }
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         };
         match self.call_stack.lock() {
             Ok(mut call_stack) => {
                 call_stack.clear();
                 call_stack.push_back(CallItem::address("sender"));
             }
-            Err(err) => bail!("Call sack err:\n{}", err),
+            Err(err) => bail!("Call stack err:\n{}", err),
         };
+        Ok(())
+    }
+    pub(crate) fn push_async_message(&self, slot: Slot, message: AsyncMessage) -> Result<()> {
+        match self.async_pool.lock() {
+            Ok(mut async_pool) => {
+                async_pool.entry(slot).and_modify(|list| list.push(message));
+            }
+            Err(err) => bail!("Async pool err:\n{}", err),
+        }
         Ok(())
     }
 }
