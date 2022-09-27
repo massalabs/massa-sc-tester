@@ -1,9 +1,8 @@
 const LEDGER_PATH: &str = "./ledger.json";
 
-use std::sync::{Arc, Mutex};
-
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Entry {
@@ -104,21 +103,28 @@ impl CallItem {
     }
 }
 
+#[derive(Copy, Clone, Default, Deserialize)]
+pub struct Slot {
+    pub period: u64,
+    pub thread: u8,
+}
+
 #[derive(Clone, Default)]
 pub(crate) struct InterfaceImpl {
     ledger: Arc<Mutex<Ledger>>,
-    /// Stack of call items ordered
     call_stack: Arc<Mutex<std::collections::VecDeque<CallItem>>>,
     owned: Arc<Mutex<std::collections::VecDeque<String>>>,
+    pub execution_slot: Slot,
 }
 
 impl InterfaceImpl {
-    pub(crate) fn new() -> Result<InterfaceImpl> {
+    pub(crate) fn new(slot: Slot) -> Result<InterfaceImpl> {
         let mut ret = InterfaceImpl::default();
         if let Ok(file) = std::fs::File::open("./ledger.json") {
             let reader = std::io::BufReader::new(file);
             ret.ledger = serde_json::from_reader(reader)?;
         }
+        ret.execution_slot = slot;
         Ok(ret)
     }
     pub(crate) fn get_entry(&self, address: &str) -> Result<Entry> {

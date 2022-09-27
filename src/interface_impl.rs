@@ -1,4 +1,5 @@
 use crate::ledger_interface::InterfaceImpl;
+
 use anyhow::{bail, Result};
 use massa_sc_runtime::{Interface, InterfaceClone};
 use std::hash::Hasher;
@@ -158,11 +159,11 @@ impl Interface for InterfaceImpl {
     }
 
     fn get_current_period(&self) -> Result<u64> {
-        Ok(0)
+        Ok(self.execution_slot.period)
     }
 
     fn get_current_thread(&self) -> Result<u8> {
-        Ok(0)
+        Ok(self.execution_slot.thread)
     }
 
     fn send_message(

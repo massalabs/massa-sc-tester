@@ -1,9 +1,8 @@
 mod interface_impl;
 mod ledger_interface;
-mod types;
 
 use anyhow::{bail, Result};
-use ledger_interface::{CallItem, InterfaceImpl};
+use ledger_interface::{CallItem, InterfaceImpl, Slot};
 use massa_sc_runtime::{run_function, run_main};
 use serde::Deserialize;
 use std::{collections::HashMap, fs, path::Path};
@@ -23,11 +22,13 @@ struct StepArguments {
     gas: u64,
     /// Raw coins sent by the caller, default is '0', 1 raw_coin = 1e-9 coin
     coins: Option<u64>,
+    /// Execution slot
+    slot: Option<Slot>,
 }
 
 fn execute_step(args: StepArguments) -> Result<()> {
     // init the context
-    let ledger_context = InterfaceImpl::new()?;
+    let ledger_context = InterfaceImpl::new(args.slot.unwrap_or_default())?;
     ledger_context.reset_addresses()?;
     if let Some(address) = args.address {
         ledger_context.call_stack_push(CallItem {
@@ -90,6 +91,7 @@ fn main(args: CommandArguments) -> Result<()> {
 
     // execute the steps
     for (step_name, step) in executions_steps {
+        // TODO: investigate execution instability
         println!("start {} execution", step_name);
         execute_step(step)?;
         println!("{} execution was successful", step_name)
