@@ -66,7 +66,7 @@ impl Ledger {
         };
         if entry.balance.checked_sub(amount).is_none() {
             bail!(
-                "Fail to set balance substraction for {} of amount {} in the ledger",
+                "Failed to set balance substraction for {} of amount {} in the ledger",
                 address,
                 amount
             )
@@ -81,7 +81,7 @@ impl Ledger {
         };
         if entry.balance.checked_add(amount).is_none() {
             bail!(
-                "Fail to set balance substraction for {} of amount {} in the ledger",
+                "Failed to set balance substraction for {} of amount {} in the ledger",
                 address,
                 amount
             )
@@ -158,13 +158,13 @@ impl ExecutionContext {
     pub(crate) fn get_entry(&self, address: &str) -> Result<Entry> {
         match self.ledger.lock() {
             Ok(ledger) => ledger.get(address),
-            Err(err) => bail!("Interface get entry:\n{}", err),
+            Err(err) => bail!("Get entry error: {}", err),
         }
     }
     pub(crate) fn save(&self) -> Result<()> {
         let str = serde_json::to_string_pretty(&self.ledger)?;
         match std::fs::write(LEDGER_PATH, str) {
-            Err(error) => bail!("Error ledger:\n{}", error),
+            Err(error) => bail!("Ledger saving error:\n{}", error),
             _ => Ok(()),
         }
     }
@@ -174,27 +174,27 @@ impl ExecutionContext {
                 cs.push_back(item);
                 Ok(())
             }
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         }
     }
     pub(crate) fn call_stack_pop(&self) -> Result<()> {
         match self.call_stack.lock() {
             Ok(mut cs) => {
                 if cs.pop_back().is_none() {
-                    bail!("Call stack err:\npop failed")
+                    bail!("Call stack error: pop failed")
                 }
                 Ok(())
             }
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         }
     }
     pub(crate) fn call_stack_peek(&self) -> Result<CallItem> {
         match self.call_stack.lock() {
             Ok(cs) => match cs.back() {
                 Some(item) => Ok(item.clone()),
-                None => bail!("Call stack err:\npeek failed"),
+                None => bail!("Call stack error: peek failed"),
             },
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         }
     }
     pub(crate) fn set_data_entry(&self, address: &str, key: &str, value: Vec<u8>) -> Result<()> {
@@ -236,19 +236,19 @@ impl ExecutionContext {
     pub(crate) fn callstack_to_vec(&self) -> Result<Vec<String>> {
         match self.call_stack.lock() {
             Ok(cs) => Ok(cs.iter().map(|item| item.address.to_owned()).collect()),
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         }
     }
     pub(crate) fn owned_to_vec(&self) -> Result<Vec<String>> {
         match self.owned.lock() {
             Ok(owned) => Ok(owned.clone().into()),
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         }
     }
     pub(crate) fn own(&self, address: &str) -> Result<bool> {
         match self.owned.lock() {
             Ok(owned) => Ok(owned.contains(&address.to_owned())),
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         }
     }
     pub(crate) fn own_insert(&self, address: &str) -> Result<()> {
@@ -257,7 +257,7 @@ impl ExecutionContext {
                 owned.push_back(address.to_string());
                 Ok(())
             }
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         }
     }
     pub(crate) fn reset_addresses(&self) -> Result<()> {
@@ -266,23 +266,26 @@ impl ExecutionContext {
                 owned.clear();
                 owned.push_back("sender".to_string());
             }
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         };
         match self.call_stack.lock() {
             Ok(mut call_stack) => {
                 call_stack.clear();
                 call_stack.push_back(CallItem::address("sender"));
             }
-            Err(err) => bail!("Call stack err:\n{}", err),
+            Err(err) => bail!("Call stack error: {}", err),
         };
         Ok(())
     }
     pub(crate) fn push_async_message(&self, slot: Slot, message: AsyncMessage) -> Result<()> {
         match self.async_pool.lock() {
             Ok(mut async_pool) => {
-                async_pool.entry(slot).and_modify(|list| list.push(message));
+                async_pool
+                    .entry(slot)
+                    .and_modify(|list| list.push(message.clone()))
+                    .or_insert_with(|| vec![message]);
             }
-            Err(err) => bail!("Async pool err:\n{}", err),
+            Err(err) => bail!("Async pool error: {}", err),
         }
         Ok(())
     }

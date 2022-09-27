@@ -190,7 +190,7 @@ impl Interface for ExecutionContext {
                 coins,
                 data: data.to_vec(),
             },
-        );
+        )?;
         Ok(())
     }
 }
