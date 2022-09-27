@@ -46,7 +46,6 @@ fn execute_step(args: StepArguments) -> Result<()> {
         bail!("{} extension should be .wasm", args.path)
     }
     let module = fs::read(path)?;
-    println!("run {}", args.path);
 
     // run the function
     println!(
@@ -87,12 +86,13 @@ fn main(args: CommandArguments) -> Result<()> {
         bail!("{} extension should be .json", args.config_path)
     }
     let config_slice = fs::read(path)?;
-    let executions_steps: HashMap<String, StepArguments> =
-        serde_json::from_slice(&config_slice).unwrap();
+    let executions_steps: HashMap<String, StepArguments> = serde_json::from_slice(&config_slice)?;
 
     // execute the steps
-    for (_step_name, step) in executions_steps {
+    for (step_name, step) in executions_steps {
+        println!("start {} execution", step_name);
         execute_step(step)?;
+        println!("{} execution was successful", step_name)
     }
     Ok(())
 }

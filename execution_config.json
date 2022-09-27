@@ -1,10 +1,14 @@
 {
-    "step_name": {
-        "path": "path/to/smart_contract",
+    "simple_step_name": {
+        "path": "path/to/main.wasm",
+        "gas": 100000
+    },
+    "special_step_name": {
+        "path": "path/to/smart-contract.wasm",
         "function": "function_name",
         "parameter": "function_parameter_value",
         "address": "caller_address",
-        "gas": 10000,
-        "coins": 10000
+        "gas": 100000,
+        "coins": 100
     }
 }
