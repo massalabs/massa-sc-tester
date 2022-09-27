@@ -45,8 +45,9 @@ checksum = "94a45b455c14666b85fc40a019e8ab9eb75e3a124e05494f5397122bc9eb06e0"
 
 [[package]]
 name = "as-ffi-bindings"
-version = "0.2.1"
-source = "git+https://github.com/massalabs/as-ffi-bindings.git?branch=fix_memory_errors#a0860c12b4a4544a20ce5612064254730bfce012"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ffa85aa087490ce8a23dc1f975085dbfa80bff07d147865407fdf2e6b8ba546"
 dependencies = [
  "anyhow",
  "wasmer",
@@ -585,8 +586,8 @@ dependencies = [
 
 [[package]]
 name = "massa-sc-runtime"
-version = "0.3.0"
-source = "git+https://github.com/massalabs/massa-sc-runtime?tag=v0.6.2#25c3e5cd781c2c50716eed75a5194d5a3cb7bc75"
+version = "0.6.6"
+source = "git+https://github.com/massalabs/massa-sc-runtime?tag=v0.6.8#6dcd437d6dfeaa42e6cb058c092808d20bfce20c"
 dependencies = [
  "anyhow",
  "as-ffi-bindings",
@@ -605,7 +606,7 @@ dependencies = [
 
 [[package]]
 name = "massa-sc-test"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1369,7 +1370,6 @@ dependencies = [
  "lazy_static",
  "loupe",
  "more-asserts",
- "rayon",
  "smallvec",
  "wasmer-compiler",
  "wasmer-types",

@@ -1,0 +1,10 @@
+{
+    "step_name": {
+        "path": "path/to/smart_contract",
+        "function": "function_name",
+        "parameter": "function_parameter_value",
+        "address": "caller_address",
+        "gas": 10000,
+        "coins": 10000
+    }
+}

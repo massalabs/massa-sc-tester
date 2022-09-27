@@ -5,29 +5,27 @@ mod types;
 use anyhow::{bail, Result};
 use ledger_interface::{CallItem, InterfaceImpl};
 use massa_sc_runtime::{run_function, run_main};
-use std::{fs, path::Path};
+use serde::Deserialize;
+use std::{collections::HashMap, fs, path::Path};
 use structopt::StructOpt;
 
-#[derive(StructOpt)]
-struct Arguments {
+#[derive(Deserialize)]
+struct StepArguments {
     /// Path to the smart contract
     path: String,
     /// Function of the smart contract to be tested, default is 'main'
-    #[structopt(short = "f", long = "function")]
     function: Option<String>,
     /// Parameter of the given function
-    #[structopt(short = "p", long = "parameter")]
     parameter: Option<String>,
     /// Address called
-    #[structopt(short = "a", long = "address")]
     address: Option<String>,
+    /// Gas for execution
+    gas: u64,
     /// Raw coins sent by the caller, default is '0', 1 raw_coin = 1e-9 coin
-    #[structopt(short = "c", long = "coins")]
     coins: Option<u64>,
 }
 
-#[paw::main]
-fn main(args: Arguments) -> Result<()> {
+fn execute_step(args: StepArguments) -> Result<()> {
     // init the context
     let ledger_context = InterfaceImpl::new()?;
     ledger_context.reset_addresses()?;
@@ -38,7 +36,7 @@ fn main(args: Arguments) -> Result<()> {
         })?;
     }
 
-    // parse the file
+    // read the wasm file
     let path = Path::new(&args.path);
     if !path.is_file() {
         bail!("{} isn't a file", args.path)
@@ -50,23 +48,51 @@ fn main(args: Arguments) -> Result<()> {
     let module = fs::read(path)?;
     println!("run {}", args.path);
 
-    // launch the tester
+    // run the function
     println!(
         "remaining points: {}",
         if let Some(function) = args.function {
             run_function(
                 &module,
-                1_000_000_000_000,
+                args.gas,
                 &function,
                 &args.parameter.unwrap_or_default(),
                 &ledger_context,
             )?
         } else {
-            run_main(&module, 1_000_000_000_000, &ledger_context)?
+            run_main(&module, args.gas, &ledger_context)?
         }
     );
 
     // save the ledger
     ledger_context.save()?;
+    Ok(())
+}
+
+#[derive(StructOpt)]
+struct CommandArguments {
+    /// Path to the execution config
+    config_path: String,
+}
+
+#[paw::main]
+fn main(args: CommandArguments) -> Result<()> {
+    // parse the config file
+    let path = Path::new(&args.config_path);
+    if !path.is_file() {
+        bail!("{} isn't a file", args.config_path)
+    }
+    let extension = path.extension().unwrap_or_default();
+    if extension != "json" {
+        bail!("{} extension should be .json", args.config_path)
+    }
+    let config_slice = fs::read(path)?;
+    let executions_steps: HashMap<String, StepArguments> =
+        serde_json::from_slice(&config_slice).unwrap();
+
+    // execute the steps
+    for (_step_name, step) in executions_steps {
+        execute_step(step)?;
+    }
     Ok(())
 }
