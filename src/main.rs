@@ -69,6 +69,7 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
 
     // run the asynchronous messages
     for AsyncMessage {
+        sender_address,
         target_address,
         target_handler,
         gas,
@@ -77,7 +78,14 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
     } in exec_context.get_async_messages_to_execute()?
     {
         let bytecode = exec_context.get_entry(&target_address)?.get_bytecode()?;
-        // TODO: setup context with coins use
+        exec_context.call_stack_push(CallItem {
+            address: sender_address,
+            coins,
+        })?;
+        exec_context.call_stack_push(CallItem {
+            address: target_address,
+            coins,
+        })?;
         run_function(
             &bytecode,
             gas,

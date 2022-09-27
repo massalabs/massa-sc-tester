@@ -184,6 +184,7 @@ impl Interface for ExecutionContext {
                 thread: validity_start.1,
             },
             AsyncMessage {
+                sender_address: "".to_string(),
                 target_address: target_address.to_string(),
                 target_handler: target_handler.to_string(),
                 gas: max_gas,
