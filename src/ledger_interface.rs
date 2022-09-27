@@ -103,7 +103,7 @@ impl CallItem {
     }
 }
 
-#[derive(Copy, Clone, Default, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, Deserialize)]
 pub struct Slot {
     pub period: u64,
     pub thread: u8,

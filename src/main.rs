@@ -2,13 +2,14 @@ mod interface_impl;
 mod ledger_interface;
 
 use anyhow::{bail, Result};
+use indexmap::IndexMap;
 use ledger_interface::{CallItem, InterfaceImpl, Slot};
 use massa_sc_runtime::{run_function, run_main};
 use serde::Deserialize;
-use std::{collections::HashMap, fs, path::Path};
+use std::{fs, path::Path};
 use structopt::StructOpt;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct StepArguments {
     /// Path to the smart contract
     path: String,
@@ -87,11 +88,10 @@ fn main(args: CommandArguments) -> Result<()> {
         bail!("{} extension should be .json", args.config_path)
     }
     let config_slice = fs::read(path)?;
-    let executions_steps: HashMap<String, StepArguments> = serde_json::from_slice(&config_slice)?;
+    let executions_steps: IndexMap<String, StepArguments> = serde_json::from_slice(&config_slice)?;
 
     // execute the steps
     for (step_name, step) in executions_steps {
-        // TODO: investigate execution instability
         println!("start {} execution", step_name);
         execute_step(step)?;
         println!("{} execution was successful", step_name)
