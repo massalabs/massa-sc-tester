@@ -2,6 +2,7 @@ use crate::execution_context::{AsyncMessage, ExecutionContext, Slot};
 
 use anyhow::{bail, Result};
 use colored::Colorize;
+use json::object;
 use massa_sc_runtime::{Interface, InterfaceClone};
 use std::hash::Hasher;
 use wyhash::WyHash;
@@ -21,7 +22,12 @@ impl InterfaceClone for ExecutionContext {
 
 impl Interface for ExecutionContext {
     fn print(&self, message: &str) -> Result<()> {
-        abi!("print: {}", message);
+        let json = object!(
+            print: {
+                message: message
+            }
+        );
+        abi!("{}", json);
         Ok(())
     }
 
@@ -42,14 +48,25 @@ impl Interface for ExecutionContext {
     fn get_balance(&self) -> Result<u64> {
         let address = &self.call_stack_peek()?.address;
         let balance = self.get_entry(address)?.balance;
-        abi!("get_balance = {}", balance);
+        let json = object!(
+            get_balance: {
+                return_value: balance
+            }
+        );
+        abi!("{}", json);
         Ok(balance)
     }
 
     /// Returns zero as a default if address not found.
     fn get_balance_for(&self, address: &str) -> Result<u64> {
         let balance = self.get_entry(address)?.balance;
-        abi!("get_balance_for({}) = {}", address, balance);
+        let json = object!(
+            get_balance_for: {
+                address: address,
+                return_value: balance
+            }
+        );
+        abi!("{}", json);
         Ok(balance)
     }
 
@@ -70,14 +87,27 @@ impl Interface for ExecutionContext {
         let address = base64::encode(gen.finish().to_be_bytes());
         self.set_module(&address, module)?;
         self.own_insert(&address)?;
-        abi!("create_module = {}", address);
+        let json = object!(
+            create_module: {
+                module: module,
+                return_value: address.clone()
+            }
+        );
+        abi!("{}", json);
         Ok(address)
     }
 
     /// Requires the data at the address
     fn raw_get_data_for(&self, address: &str, key: &str) -> Result<Vec<u8>> {
         let data = self.get(address)?.get_data(key)?;
-        abi!("raw_get_data_for({}, {}) = {:?}", address, key, data);
+        let json = object!(
+            raw_get_data_for: {
+                address: address,
+                key: key,
+                return_value: data.clone(),
+            }
+        );
+        abi!("{}", json);
         Ok(data)
     }
 
@@ -87,6 +117,14 @@ impl Interface for ExecutionContext {
     /// The execution lib will allways use the current context address for the update
     fn raw_set_data_for(&self, address: &str, key: &str, value: &[u8]) -> Result<()> {
         let curr_address = self.call_stack_peek()?.address;
+        let json = object!(
+            raw_set_data_for: {
+                address: address,
+                key: key,
+                value: value,
+            }
+        );
+        abi!("{}", json);
         if self.own(address)? || *address == curr_address {
             self.set_data_entry(address, key, value.to_vec())?;
             Ok(())
@@ -97,12 +135,24 @@ impl Interface for ExecutionContext {
 
     fn raw_get_data(&self, key: &str) -> Result<Vec<u8>> {
         let data = self.get(&self.call_stack_peek()?.address)?.get_data(key)?;
-        abi!("raw_get_data({}) = {:?}", key, data);
+        let json = object!(
+            raw_get_data: {
+                key: key,
+                return_value: data.clone()
+            }
+        );
+        abi!("{}", json);
         Ok(data)
     }
 
     fn raw_set_data(&self, key: &str, value: &[u8]) -> Result<()> {
-        abi!("raw_set_data({}, {:?})", key, value);
+        let json = object!(
+            raw_set_data: {
+                key: key,
+                value: value
+            }
+        );
+        abi!("{}", json);
         self.set_data_entry(&self.call_stack_peek()?.address, key, value.to_vec())
     }
 
@@ -110,7 +160,13 @@ impl Interface for ExecutionContext {
     /// to_address: target address
     /// raw_amount: amount to transfer (in raw u64)
     fn transfer_coins(&self, to_address: &str, raw_amount: u64) -> Result<()> {
-        abi!("transfer_coins({}, {})", to_address, raw_amount);
+        let json = object!(
+            transfer_coins: {
+                to_address: to_address,
+                raw_amount: raw_amount
+            }
+        );
+        abi!("{}", json);
         let from_address = self.call_stack_peek()?.address;
         self.transfer_coins_for(&from_address, to_address, raw_amount)
     }
@@ -125,12 +181,6 @@ impl Interface for ExecutionContext {
         to_address: &str,
         raw_amount: u64,
     ) -> Result<()> {
-        abi!(
-            "transfer_coins_for({}, {}, {})",
-            from_address,
-            to_address,
-            raw_amount
-        );
         // debit
         self.sub(from_address, raw_amount)?;
         // credit
@@ -140,66 +190,136 @@ impl Interface for ExecutionContext {
                 .expect("credit failed after same-amount debit succeeded");
             bail!("Error crediting destination balance: {}", err);
         }
+        let json = object!(
+            transfer_coins_for: {
+                from_address: from_address,
+                to_address: to_address,
+                raw_amount: raw_amount
+            }
+        );
+        abi!("{}", json);
         Ok(())
     }
 
     /// Return the list of owned adresses of a given SC user
     fn get_owned_addresses(&self) -> Result<Vec<String>> {
-        self.owned_to_vec()
+        let owned = self.owned_to_vec()?;
+        let json = object!(
+            get_owned_addresses: {
+                return_value: owned.clone()
+            }
+        );
+        abi!("{}", json);
+        Ok(owned)
     }
 
     fn get_call_stack(&self) -> Result<Vec<String>> {
-        self.callstack_to_vec()
+        let callstack = self.callstack_to_vec()?;
+        let json = object!(
+            get_call_stack: {
+                return_value: callstack.clone()
+            }
+        );
+        abi!("{}", json);
+        Ok(callstack)
     }
 
     fn generate_event(&self, data: String) -> Result<()> {
-        abi!("generate_event({})", data);
+        let json = object!(
+            generate_event: {
+                return_value: data
+            }
+        );
+        abi!("{}", json);
         Ok(())
     }
 
     fn get_call_coins(&self) -> Result<u64> {
         let coins = self.call_stack_peek()?.coins;
-        abi!("get_call_coins = {}", coins);
+        let json = object!(
+            get_call_coins: {
+                return_value: coins
+            }
+        );
+        abi!("{}", json);
         Ok(coins)
     }
 
     fn has_data(&self, key: &str) -> Result<bool> {
         let ret_bool = self.get(&self.call_stack_peek()?.address)?.has_data(key);
-        abi!("has_data({}) = {}", key, ret_bool);
+        let json = object!(
+            has_data: {
+                key: key,
+                return_value: ret_bool
+            }
+        );
+        abi!("{}", json);
         Ok(ret_bool)
     }
 
     fn hash(&self, key: &[u8]) -> Result<String> {
         let hash = String::from_utf8(key.to_vec())?;
-        abi!("hash({:?}) = {}", key, hash);
+        let json = object!(
+            hash: {
+                key: key,
+                return_value: hash.clone()
+            }
+        );
+        abi!("{}", json);
         Ok(hash)
     }
 
     fn raw_set_bytecode_for(&self, address: &str, bytecode: &[u8]) -> Result<()> {
-        abi!("raw_set_bytecode_for({}, {:?})", address, bytecode);
         self.set_module(address, bytecode)?;
+        let json = object!(
+            raw_set_bytecode_for: {
+                address: address,
+                return_value: bytecode
+            }
+        );
+        abi!("{}", json);
         Ok(())
     }
 
     fn raw_set_bytecode(&self, bytecode: &[u8]) -> Result<()> {
-        abi!("raw_set_bytecode({:?})", bytecode);
         self.set_module(&self.call_stack_peek()?.address, bytecode)?;
+        let json = object!(
+            raw_set_bytecode: {
+                return_value: bytecode
+            }
+        );
+        abi!("{}", json);
         Ok(())
     }
 
     fn unsafe_random(&self) -> Result<i64> {
-        let rand = rand::random();
-        abi!("unsafe_random = {}", rand);
-        Ok(rand)
+        let rnbr: i64 = rand::random();
+        let json = object!(
+            unsafe_random: {
+                return_value: rnbr
+            }
+        );
+        abi!("{}", json);
+        Ok(rnbr)
     }
 
     fn get_current_period(&self) -> Result<u64> {
-        abi!("get_current_period = {}", self.execution_slot.period);
+        let json = object!(
+            get_current_period: {
+                return_value:  self.execution_slot.period
+            }
+        );
+        abi!("{}", json);
         Ok(self.execution_slot.period)
     }
 
     fn get_current_thread(&self) -> Result<u8> {
-        abi!("get_current_thread = {}", self.execution_slot.thread);
+        let json = object!(
+            get_current_thread: {
+                return_value:  self.execution_slot.thread
+            }
+        );
+        abi!("{}", json);
         Ok(self.execution_slot.thread)
     }
 
@@ -210,12 +330,10 @@ impl Interface for ExecutionContext {
         validity_start: (u64, u8),
         _validity_end: (u64, u8),
         max_gas: u64,
-        _gas_price: u64,
+        gas_price: u64,
         coins: u64,
         data: &[u8],
     ) -> Result<()> {
-        let string_data = std::str::from_utf8(data)?;
-        abi!("send_message({}, {})", target_address, string_data);
         self.push_async_message(
             Slot {
                 period: validity_start.0,
@@ -227,9 +345,22 @@ impl Interface for ExecutionContext {
                 target_handler: target_handler.to_string(),
                 gas: max_gas,
                 coins,
-                data: string_data.to_string(),
+                data: data.to_vec(),
             },
         )?;
+        let json = object!(
+            send_message: {
+                target_address: target_address,
+                target_handler: target_handler,
+                // validity_start: validity_start,
+                // validity_end: validity_end,
+                max_gas: max_gas,
+                gas_price: gas_price,
+                coins: coins,
+                data: data,
+            }
+        );
+        abi!("{}", json);
         Ok(())
     }
 }

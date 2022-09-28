@@ -117,7 +117,13 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
             coins,
         })?;
         message_runner!("execute {}", target_handler);
-        let remaining_gas = run_function(&bytecode, gas, &target_handler, &data, exec_context)?;
+        let remaining_gas = run_function(
+            &bytecode,
+            gas,
+            &target_handler,
+            std::str::from_utf8(&data)?,
+            exec_context,
+        )?;
         message_runner!(
             "{} execution was successful, remaining gas is {}",
             target_handler,

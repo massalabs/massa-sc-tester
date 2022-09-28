@@ -132,7 +132,7 @@ pub struct AsyncMessage {
     pub target_handler: String,
     pub gas: u64,
     pub coins: u64,
-    pub data: String,
+    pub data: Vec<u8>,
 }
 
 type AsyncPool = BTreeMap<Slot, Vec<AsyncMessage>>;
