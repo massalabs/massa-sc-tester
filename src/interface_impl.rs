@@ -35,8 +35,7 @@ impl Interface for ExecutionContext {
             address: address.to_owned(),
             coins: raw_coins,
         })?;
-        let bytecode = entry.get_bytecode();
-        bytecode
+        entry.get_bytecode()
     }
 
     /// Returns zero as a default if address not found.
@@ -215,7 +214,7 @@ impl Interface for ExecutionContext {
         coins: u64,
         data: &[u8],
     ) -> Result<()> {
-        let string_data = std::str::from_utf8(&data)?;
+        let string_data = std::str::from_utf8(data)?;
         abi!("send_message({}, {})", target_address, string_data);
         self.push_async_message(
             Slot {
