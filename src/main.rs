@@ -8,7 +8,7 @@ use execution_context::{CallItem, ExecutionContext, Slot};
 use indexmap::IndexMap;
 use massa_sc_runtime::{run_function, run_main};
 use serde::Deserialize;
-use std::{fs, path::Path};
+use std::{fs, path::Path, time::Instant};
 use structopt::StructOpt;
 
 macro_rules! step_runner {
@@ -117,13 +117,7 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
             coins,
         })?;
         message_runner!("execute {}", target_handler);
-        let remaining_gas = run_function(
-            &bytecode,
-            gas,
-            &target_handler,
-            std::str::from_utf8(&data)?,
-            exec_context,
-        )?;
+        let remaining_gas = run_function(&bytecode, gas, &target_handler, &data, exec_context)?;
         message_runner!(
             "{} execution was successful, remaining gas is {}",
             target_handler,
@@ -162,8 +156,14 @@ fn main(args: CommandArguments) -> Result<()> {
     // execute the steps
     for (step_name, step) in executions_steps {
         step_runner!("execute {}", step_name);
+        let start = Instant::now();
         execute_step(&mut exec_context, step)?;
-        step_runner!("{} was successful", step_name);
+        let duration = start.elapsed();
+        step_runner!(
+            "{} was successful, execution time is {} ms",
+            step_name,
+            duration.as_millis()
+        );
     }
     Ok(())
 }

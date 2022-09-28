@@ -36,7 +36,6 @@ impl Interface for ExecutionContext {
             coins: raw_coins,
         })?;
         let bytecode = entry.get_bytecode();
-        abi!("init_call: {:?}", bytecode);
         bytecode
     }
 
@@ -44,20 +43,19 @@ impl Interface for ExecutionContext {
     fn get_balance(&self) -> Result<u64> {
         let address = &self.call_stack_peek()?.address;
         let balance = self.get_entry(address)?.balance;
-        abi!("get_balance: {}", balance);
+        abi!("get_balance = {}", balance);
         Ok(balance)
     }
 
     /// Returns zero as a default if address not found.
     fn get_balance_for(&self, address: &str) -> Result<u64> {
         let balance = self.get_entry(address)?.balance;
-        abi!("get_balance_for: {}", balance);
+        abi!("get_balance_for({}) = {}", address, balance);
         Ok(balance)
     }
 
     /// Pops the last element of the call stack
     fn finish_call(&self) -> Result<()> {
-        abi!("finish_call");
         self.call_stack_pop()
     }
 
@@ -73,14 +71,14 @@ impl Interface for ExecutionContext {
         let address = base64::encode(gen.finish().to_be_bytes());
         self.set_module(&address, module)?;
         self.own_insert(&address)?;
-        abi!("create_module: {}", address);
+        abi!("create_module = {}", address);
         Ok(address)
     }
 
     /// Requires the data at the address
     fn raw_get_data_for(&self, address: &str, key: &str) -> Result<Vec<u8>> {
         let data = self.get(address)?.get_data(key)?;
-        abi!("raw_get_data_for input: {:?}", data);
+        abi!("raw_get_data_for({}, {}) = {:?}", address, key, data);
         Ok(data)
     }
 
@@ -99,10 +97,13 @@ impl Interface for ExecutionContext {
     }
 
     fn raw_get_data(&self, key: &str) -> Result<Vec<u8>> {
-        self.get(&self.call_stack_peek()?.address)?.get_data(key)
+        let data = self.get(&self.call_stack_peek()?.address)?.get_data(key)?;
+        abi!("raw_get_data({}) = {:?}", key, data);
+        Ok(data)
     }
 
     fn raw_set_data(&self, key: &str, value: &[u8]) -> Result<()> {
+        abi!("raw_set_data({}, {:?})", key, value);
         self.set_data_entry(&self.call_stack_peek()?.address, key, value.to_vec())
     }
 
@@ -110,6 +111,7 @@ impl Interface for ExecutionContext {
     /// to_address: target address
     /// raw_amount: amount to transfer (in raw u64)
     fn transfer_coins(&self, to_address: &str, raw_amount: u64) -> Result<()> {
+        abi!("transfer_coins({}, {})", to_address, raw_amount);
         let from_address = self.call_stack_peek()?.address;
         self.transfer_coins_for(&from_address, to_address, raw_amount)
     }
@@ -124,6 +126,12 @@ impl Interface for ExecutionContext {
         to_address: &str,
         raw_amount: u64,
     ) -> Result<()> {
+        abi!(
+            "transfer_coins_for({}, {}, {})",
+            from_address,
+            to_address,
+            raw_amount
+        );
         // debit
         self.sub(from_address, raw_amount)?;
         // credit
@@ -146,49 +154,53 @@ impl Interface for ExecutionContext {
     }
 
     fn generate_event(&self, data: String) -> Result<()> {
-        abi!("generate_event: {}", data);
+        abi!("generate_event({})", data);
         Ok(())
     }
 
     fn get_call_coins(&self) -> Result<u64> {
-        Ok(self.call_stack_peek()?.coins)
+        let coins = self.call_stack_peek()?.coins;
+        abi!("get_call_coins = {}", coins);
+        Ok(coins)
     }
 
     fn has_data(&self, key: &str) -> Result<bool> {
-        Ok(self.get(&self.call_stack_peek()?.address)?.has_data(key))
+        let ret_bool = self.get(&self.call_stack_peek()?.address)?.has_data(key);
+        abi!("has_data({}) = {}", key, ret_bool);
+        Ok(ret_bool)
     }
 
     fn hash(&self, key: &[u8]) -> Result<String> {
         let hash = String::from_utf8(key.to_vec())?;
-        abi!("hash: {}", hash);
+        abi!("hash({:?}) = {}", key, hash);
         Ok(hash)
     }
 
     fn raw_set_bytecode_for(&self, address: &str, bytecode: &[u8]) -> Result<()> {
-        abi!("raw_set_bytecode_for");
+        abi!("raw_set_bytecode_for({}, {:?})", address, bytecode);
         self.set_module(address, bytecode)?;
         Ok(())
     }
 
     fn raw_set_bytecode(&self, bytecode: &[u8]) -> Result<()> {
-        abi!("raw_set_bytecode");
+        abi!("raw_set_bytecode({:?})", bytecode);
         self.set_module(&self.call_stack_peek()?.address, bytecode)?;
         Ok(())
     }
 
     fn unsafe_random(&self) -> Result<i64> {
         let rand = rand::random();
-        abi!("unsafe_random: {}", rand);
+        abi!("unsafe_random = {}", rand);
         Ok(rand)
     }
 
     fn get_current_period(&self) -> Result<u64> {
-        abi!("get_current_period: {}", self.execution_slot.period);
+        abi!("get_current_period = {}", self.execution_slot.period);
         Ok(self.execution_slot.period)
     }
 
     fn get_current_thread(&self) -> Result<u8> {
-        abi!("get_current_thread: {}", self.execution_slot.thread);
+        abi!("get_current_thread = {}", self.execution_slot.thread);
         Ok(self.execution_slot.thread)
     }
 
@@ -203,8 +215,8 @@ impl Interface for ExecutionContext {
         coins: u64,
         data: &[u8],
     ) -> Result<()> {
-        let handler_arg = std::str::from_utf8(&data)?;
-        abi!("send_message: {}", handler_arg);
+        let string_data = std::str::from_utf8(&data)?;
+        abi!("send_message({}, {})", target_address, string_data);
         self.push_async_message(
             Slot {
                 period: validity_start.0,
@@ -216,7 +228,7 @@ impl Interface for ExecutionContext {
                 target_handler: target_handler.to_string(),
                 gas: max_gas,
                 coins,
-                data: data.to_vec(),
+                data: string_data.to_string(),
             },
         )?;
         Ok(())

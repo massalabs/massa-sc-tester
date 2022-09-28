@@ -8,10 +8,10 @@
         }
     },
     "special_step_name": {
-        "path": "../massa-sc-examples/async-calls/build/main.wasm",
-        "function": "function_name",
-        "parameter": "function_parameter_value",
-        "address": "caller_address",
+        "path": "../massa-sc-examples/async-calls/build/smart-contract.wasm",
+        "function": "receive_and_send",
+        "parameter": "test",
+        "address": "sender",
         "gas": 100000,
         "coins": 100,
         "slot": {
