@@ -1,6 +1,6 @@
 mod execution_context;
 mod interface_impl;
-mod step;
+mod step_config;
 
 use crate::execution_context::AsyncMessage;
 use anyhow::{bail, Result};
@@ -8,31 +8,44 @@ use execution_context::{CallItem, ExecutionContext, Slot};
 use indexmap::IndexMap;
 use json::{object, JsonValue};
 use massa_sc_runtime::{run_function, run_main};
-use std::{collections::BTreeMap, fs, fs::File, path::Path};
-use step::ConfigStep;
+use serde::Deserialize;
+use std::{
+    cmp::Ordering,
+    collections::{BTreeSet, VecDeque},
+    fs,
+    path::Path,
+};
+use step_config::StepConfig;
 use structopt::StructOpt;
 
 fn execute_step(
     exec_context: &mut ExecutionContext,
     slot: Slot,
-    config_step: ConfigStep,
+    config_step: StepConfig,
 ) -> Result<JsonValue> {
     // init trace
     let mut trace = JsonValue::new_array();
 
     // match the config step
     match config_step {
-        ConfigStep::ExecuteSC {
+        StepConfig::ExecuteSC {
             path,
             function,
             parameter,
             gas,
-            callstack,
+            call_stack,
         } => {
             // init the context for this step
             exec_context.reset_addresses()?;
-            for call_item in callstack {
-                exec_context.call_stack_push(call_item)?;
+            if let Some(stack) = call_stack {
+                for call_item in stack {
+                    exec_context.call_stack_push(call_item)?;
+                }
+            } else {
+                exec_context.call_stack_push(CallItem {
+                    address: "default_sender_addr".to_string(),
+                    coins: 0,
+                })?;
             }
             exec_context.execution_slot = slot;
 
@@ -118,6 +131,38 @@ fn execute_step(
     Ok(trace)
 }
 
+#[derive(Debug, Deserialize)]
+struct Step {
+    name: String,
+    config: StepConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct SlotExecutionSteps {
+    slot: Slot,
+    execution_steps: VecDeque<Step>,
+}
+
+impl PartialOrd for SlotExecutionSteps {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.slot.partial_cmp(&other.slot)
+    }
+}
+
+impl Ord for SlotExecutionSteps {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.slot.cmp(&other.slot)
+    }
+}
+
+impl PartialEq for SlotExecutionSteps {
+    fn eq(&self, other: &Self) -> bool {
+        self.slot.eq(&other.slot)
+    }
+}
+
+impl Eq for SlotExecutionSteps {}
+
 #[derive(StructOpt)]
 struct CommandArguments {
     /// Path to the execution config
@@ -139,34 +184,37 @@ fn main(args: CommandArguments) -> Result<()> {
         bail!("{} extension should be .json", args.config_path)
     }
     let config_slice = fs::read(path)?;
-    let executions_config: BTreeMap<Slot, IndexMap<String, ConfigStep>> =
-        serde_json::from_slice(&config_slice)?;
+    let executions_config: BTreeSet<SlotExecutionSteps> = serde_json::from_slice(&config_slice)?;
+
+    println!("{:?}", executions_config);
 
     // execute the steps
     let mut trace = JsonValue::new_array();
-    for (slot, execution_steps) in executions_config {
+    for SlotExecutionSteps {
+        slot,
+        execution_steps,
+    } in executions_config
+    {
         let mut slot_trace = JsonValue::new_array();
-        for (step_name, step) in execution_steps {
-            let step_trace = execute_step(&mut exec_context, slot, step)?;
-            let step_json = object!(
+        for Step { name, config } in execution_steps {
+            let step_trace = execute_step(&mut exec_context, slot, config)?;
+            slot_trace.push(object!(
                 execute_step: {
-                    name: step_name,
+                    name: name,
                     output: step_trace
                 }
-            );
-            slot_trace.push(step_json)?;
+            ))?;
         }
-        let slot_json = object!(
+        trace.push(object!(
             execute_slot: {
                 slot: serde_json::to_string_pretty(&slot)?,
                 output: slot_trace
             }
-        );
-        trace.push(slot_json)?;
+        ))?;
     }
 
     // print the trace
-    let mut file = File::create("trace.json")?;
+    let mut file = fs::File::create("trace.json")?;
     trace.write_pretty(&mut file, 4)?;
     Ok(())
 }

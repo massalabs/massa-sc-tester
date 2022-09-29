@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
-pub(crate) enum ConfigStep {
+pub(crate) enum StepConfig {
     ExecuteSC {
         /// Path to the smart contract
         path: String,
@@ -15,7 +15,7 @@ pub(crate) enum ConfigStep {
         /// Gas for execution
         gas: u64,
         /// ExecuteSC callstack
-        callstack: VecDeque<CallItem>,
+        call_stack: Option<VecDeque<CallItem>>,
     },
     CallSC {
         /// Address of the smart contract
@@ -27,7 +27,7 @@ pub(crate) enum ConfigStep {
         /// Gas for execution
         gas: u64,
         /// CallSC callstack
-        callstack: VecDeque<CallItem>,
+        call_stack: Option<VecDeque<CallItem>>,
     },
     ReadEvents {
         /// Emitting address
