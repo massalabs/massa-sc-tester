@@ -19,7 +19,7 @@ struct StepArguments {
     function: Option<String>,
     /// Parameter of the given function
     parameter: Option<String>,
-    /// Address called
+    /// Caller address
     address: Option<String>,
     /// Gas for execution
     gas: u64,
@@ -35,12 +35,10 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
 
     // init the context for this step
     exec_context.reset_addresses()?;
-    if let Some(address) = args.address {
-        exec_context.call_stack_push(CallItem {
-            address,
-            coins: args.coins.unwrap_or_default(),
-        })?;
-    }
+    exec_context.call_stack_push(CallItem {
+        address: args.address.unwrap_or("default_addr".to_string()),
+        coins: args.coins.unwrap_or_default(),
+    })?;
     exec_context.execution_slot = args.slot;
 
     // read the wasm file
@@ -94,6 +92,7 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
     } in exec_context.get_async_messages_to_execute()?
     {
         let bytecode = exec_context.get_entry(&target_address)?.get_bytecode()?;
+        exec_context.reset_addresses()?;
         exec_context.call_stack_push(CallItem {
             address: sender_address,
             coins,
@@ -162,6 +161,6 @@ fn main(args: CommandArguments) -> Result<()> {
 
     // print the trace
     let mut file = File::create("trace.json")?;
-    trace.write_pretty(&mut file, 1)?;
+    trace.write_pretty(&mut file, 4)?;
     Ok(())
 }

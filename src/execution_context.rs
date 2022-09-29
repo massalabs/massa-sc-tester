@@ -99,15 +99,6 @@ pub(crate) struct CallItem {
     pub coins: u64,
 }
 
-impl CallItem {
-    pub(crate) fn address(address: &str) -> Self {
-        Self {
-            address: address.to_string(),
-            coins: 0,
-        }
-    }
-}
-
 #[derive(Copy, Clone, Debug, Default, Deserialize, PartialEq, Eq)]
 pub struct Slot {
     pub period: u64,
@@ -273,15 +264,12 @@ impl ExecutionContext {
         match self.owned.lock() {
             Ok(mut owned) => {
                 owned.clear();
-                // TODO: think twice about this and call before updating callstack above
-                owned.push_back("sender".to_string());
             }
             Err(err) => bail!("Call stack error: {}", err),
         };
         match self.call_stack.lock() {
             Ok(mut call_stack) => {
                 call_stack.clear();
-                call_stack.push_back(CallItem::address("sender"));
             }
             Err(err) => bail!("Call stack error: {}", err),
         };
