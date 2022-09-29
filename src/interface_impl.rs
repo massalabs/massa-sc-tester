@@ -344,10 +344,14 @@ impl Interface for ExecutionContext {
             send_message: {
                 target_address: target_address,
                 target_handler: target_handler,
-                validity_start_period: validity_start.0,
-                validity_start_thread: validity_start.1,
-                validity_end_period: validity_end.0,
-                validity_end_thread: validity_end.1,
+                validity_start: {
+                    period: validity_start.0,
+                    thread: validity_start.1
+                },
+                validity_end: {
+                    period: validity_end.0,
+                    thread: validity_end.1
+                },
                 max_gas: max_gas,
                 gas_price: gas_price,
                 coins: coins,
