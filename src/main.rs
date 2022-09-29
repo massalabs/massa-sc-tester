@@ -109,7 +109,7 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
             exec_context,
         )?;
         let json = object!(
-            execute_function: {
+            execute_message_function: {
                 name: target_handler,
                 remaining_gas: remaining_gas,
                 output: exec_context.take_execution_trace()?,
