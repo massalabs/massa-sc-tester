@@ -1,12 +1,12 @@
 {
-    "simple_step_name": {
-        "path": "../massa-sc-examples/async-calls/build/main.wasm",
-        "gas": 100000,
-        "slot": {
-            "period": 0,
-            "thread": 0
-        }
-    },
+    // "simple_step_name": {
+    //     "path": "../massa-sc-examples/async-calls/build/main.wasm",
+    //     "gas": 100000,
+    //     "slot": {
+    //         "period": 0,
+    //         "thread": 0
+    //     }
+    // },
     "special_step_name": {
         "path": "../massa-sc-examples/async-calls/build/smart-contract.wasm",
         "function": "receive_and_send",

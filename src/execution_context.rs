@@ -327,4 +327,14 @@ impl ExecutionContext {
             Err(err) => bail!("Execution trace error: {}", err),
         }
     }
+    pub(crate) fn take_execution_trace(&self) -> Result<JsonValue> {
+        match self.execution_trace.lock() {
+            Ok(mut trace) => {
+                let ret_trace = trace.clone();
+                trace.clear();
+                Ok(ret_trace)
+            }
+            Err(err) => bail!("Execution trace error: {}", err),
+        }
+    }
 }

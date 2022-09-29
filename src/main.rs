@@ -5,31 +5,11 @@ use crate::execution_context::AsyncMessage;
 use anyhow::{bail, Result};
 use execution_context::{CallItem, ExecutionContext, Slot};
 use indexmap::IndexMap;
+use json::{object, JsonValue};
 use massa_sc_runtime::{run_function, run_main};
 use serde::Deserialize;
-use std::{fs, path::Path, time::Instant};
+use std::{fs, fs::File, path::Path};
 use structopt::StructOpt;
-
-macro_rules! step_runner {
-    ($($arg:tt)+) => {
-        print!("{} ", "STEP RUNNER");
-        println!($($arg)+);
-    };
-}
-
-macro_rules! sc_runner {
-    ($($arg:tt)+) => {
-        print!("{} ", "SC RUNNER");
-        println!($($arg)+);
-    };
-}
-
-macro_rules! message_runner {
-    ($($arg:tt)+) => {
-        print!("{} ", "MESSAGE RUNNER");
-        println!($($arg)+);
-    };
-}
 
 #[derive(Debug, Deserialize)]
 struct StepArguments {
@@ -49,7 +29,10 @@ struct StepArguments {
     slot: Slot,
 }
 
-fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Result<()> {
+fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Result<JsonValue> {
+    // init trace
+    let mut trace = JsonValue::new_array();
+
     // init the context for this step
     exec_context.reset_addresses()?;
     if let Some(address) = args.address {
@@ -72,29 +55,33 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
     let module = fs::read(path)?;
 
     // run the function
-    if let Some(function) = args.function {
-        sc_runner!("execute {}", function);
-        let remaining_gas = run_function(
-            &module,
-            args.gas,
-            &function,
-            &args.parameter.unwrap_or_default(),
-            exec_context,
-        )?;
-        sc_runner!(
-            "{} execution was successful, remaining gas is {}",
+    let (remaining_gas, function_name) = if let Some(function) = args.function {
+        (
+            run_function(
+                &module,
+                args.gas,
+                &function,
+                &args.parameter.unwrap_or_default(),
+                exec_context,
+            )?,
             function,
-            remaining_gas
-        );
+        )
     } else {
-        sc_runner!("execute {}", "main");
-        let remaining_gas = run_main(&module, args.gas, exec_context)?;
-        sc_runner!(
-            "{} execution was successful, remaining gas is {}",
-            "main",
-            remaining_gas
-        );
-    }
+        (
+            run_main(&module, args.gas, exec_context)?,
+            "main".to_string(),
+        )
+    };
+
+    // push the function trace
+    let json = object!(
+        execute_function: {
+            name: function_name,
+            remaining_gas: remaining_gas,
+            output: exec_context.take_execution_trace()?,
+        }
+    );
+    trace.push(json)?;
 
     // run the asynchronous messages
     for AsyncMessage {
@@ -115,7 +102,6 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
             address: target_address,
             coins,
         })?;
-        message_runner!("execute {}", target_handler);
         let remaining_gas = run_function(
             &bytecode,
             gas,
@@ -123,16 +109,19 @@ fn execute_step(exec_context: &mut ExecutionContext, args: StepArguments) -> Res
             std::str::from_utf8(&data)?,
             exec_context,
         )?;
-        message_runner!(
-            "{} execution was successful, remaining gas is {}",
-            target_handler,
-            remaining_gas
+        let json = object!(
+            execute_function: {
+                name: target_handler,
+                remaining_gas: remaining_gas,
+                output: exec_context.take_execution_trace()?,
+            }
         );
+        trace.push(json)?;
     }
 
     // save the ledger
     exec_context.save()?;
-    Ok(())
+    Ok(trace)
 }
 
 #[derive(StructOpt)]
@@ -159,16 +148,20 @@ fn main(args: CommandArguments) -> Result<()> {
     let executions_steps: IndexMap<String, StepArguments> = serde_json::from_slice(&config_slice)?;
 
     // execute the steps
+    let mut trace = JsonValue::new_array();
     for (step_name, step) in executions_steps {
-        step_runner!("execute {}", step_name);
-        let start = Instant::now();
-        execute_step(&mut exec_context, step)?;
-        let duration = start.elapsed();
-        step_runner!(
-            "{} was successful, execution time is {} ms",
-            step_name,
-            duration.as_millis()
+        let step_trace = execute_step(&mut exec_context, step)?;
+        let json = object!(
+            execute_step: {
+                name: step_name,
+                output: step_trace
+            }
         );
+        trace.push(json)?;
     }
+
+    // print the trace
+    let mut file = File::create("trace.json")?;
+    trace.write_pretty(&mut file, 1)?;
     Ok(())
 }
