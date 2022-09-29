@@ -2,6 +2,10 @@
 
 `massa-sc-tester` is a minimal testing environment made for running massa smart contracts. This environment provides a ledger and a call stack that can be interacted with through a smart contract, as you would in the Massa network.
 
+## IMPORTANT NOTE
+
+`massa-sc-tester` is currently being reworked, this documentation is *not* up to date.
+
 ## What it does *not* provide
 
 `massa-sc-tester` is not a network. Some ABI calls that require blockchain data other than the ledger or the call stack have dummy implementations such as:
