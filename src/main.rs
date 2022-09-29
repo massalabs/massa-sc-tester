@@ -42,8 +42,9 @@ fn execute_step(
                     exec_context.call_stack_push(call_item)?;
                 }
             } else {
+                // TODO: MAKE CALL STACK MANDATORY
                 exec_context.call_stack_push(CallItem {
-                    address: "default_sender_addr".to_string(),
+                    address: "sender".to_string(),
                     coins: 0,
                 })?;
             }
@@ -186,8 +187,6 @@ fn main(args: CommandArguments) -> Result<()> {
     let config_slice = fs::read(path)?;
     let executions_config: BTreeSet<SlotExecutionSteps> = serde_json::from_slice(&config_slice)?;
 
-    println!("{:?}", executions_config);
-
     // execute the steps
     let mut trace = JsonValue::new_array();
     for SlotExecutionSteps {
@@ -207,7 +206,10 @@ fn main(args: CommandArguments) -> Result<()> {
         }
         trace.push(object!(
             execute_slot: {
-                slot: serde_json::to_string_pretty(&slot)?,
+                execution_slot: {
+                    period: slot.period,
+                    thread: slot.thread
+                },
                 output: slot_trace
             }
         ))?;
