@@ -1,10 +1,10 @@
-use crate::execution_context::Slot;
+use crate::execution_context::{CallItem, Slot};
 use serde::Deserialize;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
-pub enum StepType {
+pub(crate) enum ConfigStep {
     ExecuteSC {
         /// Path to the smart contract
         path: String,
@@ -12,14 +12,10 @@ pub enum StepType {
         function: Option<String>,
         /// Parameter of the given function
         parameter: Option<String>,
-        /// Caller address
-        caller_address: Option<String>,
         /// Gas for execution
         gas: u64,
-        /// Raw coins sent by the caller, default is '0', 1 raw_coin = 1e-9 coin
-        coins: Option<u64>,
-        /// Execution slot
-        slot: Slot,
+        /// ExecuteSC callstack
+        callstack: VecDeque<CallItem>,
     },
     CallSC {
         /// Address of the smart contract
@@ -30,8 +26,8 @@ pub enum StepType {
         parameter: Option<String>,
         /// Gas for execution
         gas: u64,
-        /// Raw coins sent by the caller, default is '0', 1 raw_coin = 1e-9 coin
-        coins: Option<u64>,
+        /// CallSC callstack
+        callstack: VecDeque<CallItem>,
     },
     ReadEvents {
         /// Emitting address
@@ -65,16 +61,16 @@ pub enum StepType {
         /// End slot
         end: Option<Slot>,
     },
-    // WriteAsyncMessages {
-    //     /// Emitting address
-    //     emitter_address: Option<String>,
-    //     target_address: &str,
-    //     target_handler: &str,
-    //     validity_start: (u64, u8),
-    //     validity_end: (u64, u8),
-    //     max_gas: u64,
-    //     gas_price: u64,
-    //     coins: u64,
-    //     data: &[u8],
-    // },
+    WriteAsyncMessages {
+        /// Emitting address
+        emitter_address: String,
+        target_address: String,
+        target_handler: String,
+        validity_start: Slot,
+        validity_end: Slot,
+        max_gas: u64,
+        gas_price: u64,
+        coins: u64,
+        data: Vec<u8>,
+    },
 }

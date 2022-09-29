@@ -92,14 +92,15 @@ impl Ledger {
     }
 }
 
-/// The call item contains the address called and the amount sent by the caller
-#[derive(Clone, Default)]
+#[derive(Clone, Deserialize, Debug, Default)]
 pub(crate) struct CallItem {
+    /// Adress called
     pub address: String,
+    /// Raw coins sent by the caller, default is '0', 1 raw_coin = 1e-9 coin
     pub coins: u64,
 }
 
-#[derive(Copy, Clone, Debug, Default, Deserialize, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Slot {
     pub period: u64,
     pub thread: u8,
