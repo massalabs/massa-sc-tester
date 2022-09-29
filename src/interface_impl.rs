@@ -1,18 +1,10 @@
 use crate::execution_context::{AsyncMessage, ExecutionContext, Slot};
 
 use anyhow::{bail, Result};
-use colored::Colorize;
 use json::object;
 use massa_sc_runtime::{Interface, InterfaceClone};
 use std::hash::Hasher;
 use wyhash::WyHash;
-
-macro_rules! abi {
-    ($($arg:tt)+) => {
-        print!("{} ", "ABI".bold().purple());
-        println!($($arg)+);
-    };
-}
 
 impl InterfaceClone for ExecutionContext {
     fn clone_box(&self) -> Box<dyn Interface> {
@@ -27,7 +19,7 @@ impl Interface for ExecutionContext {
                 message: message
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(())
     }
 
@@ -53,7 +45,7 @@ impl Interface for ExecutionContext {
                 return_value: balance
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(balance)
     }
 
@@ -66,7 +58,7 @@ impl Interface for ExecutionContext {
                 return_value: balance
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(balance)
     }
 
@@ -93,7 +85,7 @@ impl Interface for ExecutionContext {
                 return_value: address.clone()
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(address)
     }
 
@@ -107,7 +99,7 @@ impl Interface for ExecutionContext {
                 return_value: data.clone(),
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(data)
     }
 
@@ -124,7 +116,7 @@ impl Interface for ExecutionContext {
                 value: value,
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         if self.own(address)? || *address == curr_address {
             self.set_data_entry(address, key, value.to_vec())?;
             Ok(())
@@ -141,7 +133,7 @@ impl Interface for ExecutionContext {
                 return_value: data.clone()
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(data)
     }
 
@@ -152,7 +144,7 @@ impl Interface for ExecutionContext {
                 value: value
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         self.set_data_entry(&self.call_stack_peek()?.address, key, value.to_vec())
     }
 
@@ -166,7 +158,7 @@ impl Interface for ExecutionContext {
                 raw_amount: raw_amount
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         let from_address = self.call_stack_peek()?.address;
         self.transfer_coins_for(&from_address, to_address, raw_amount)
     }
@@ -197,7 +189,7 @@ impl Interface for ExecutionContext {
                 raw_amount: raw_amount
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(())
     }
 
@@ -209,7 +201,7 @@ impl Interface for ExecutionContext {
                 return_value: owned.clone()
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(owned)
     }
 
@@ -220,7 +212,7 @@ impl Interface for ExecutionContext {
                 return_value: callstack.clone()
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(callstack)
     }
 
@@ -230,7 +222,7 @@ impl Interface for ExecutionContext {
                 return_value: data
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(())
     }
 
@@ -241,7 +233,7 @@ impl Interface for ExecutionContext {
                 return_value: coins
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(coins)
     }
 
@@ -253,7 +245,7 @@ impl Interface for ExecutionContext {
                 return_value: ret_bool
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(ret_bool)
     }
 
@@ -265,7 +257,7 @@ impl Interface for ExecutionContext {
                 return_value: hash.clone()
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(hash)
     }
 
@@ -277,7 +269,7 @@ impl Interface for ExecutionContext {
                 return_value: bytecode
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(())
     }
 
@@ -288,7 +280,7 @@ impl Interface for ExecutionContext {
                 return_value: bytecode
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(())
     }
 
@@ -299,7 +291,7 @@ impl Interface for ExecutionContext {
                 return_value: rnbr
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(rnbr)
     }
 
@@ -309,7 +301,7 @@ impl Interface for ExecutionContext {
                 return_value:  self.execution_slot.period
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(self.execution_slot.period)
     }
 
@@ -319,7 +311,7 @@ impl Interface for ExecutionContext {
                 return_value:  self.execution_slot.thread
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(self.execution_slot.thread)
     }
 
@@ -328,7 +320,7 @@ impl Interface for ExecutionContext {
         target_address: &str,
         target_handler: &str,
         validity_start: (u64, u8),
-        _validity_end: (u64, u8),
+        validity_end: (u64, u8),
         max_gas: u64,
         gas_price: u64,
         coins: u64,
@@ -352,15 +344,17 @@ impl Interface for ExecutionContext {
             send_message: {
                 target_address: target_address,
                 target_handler: target_handler,
-                // validity_start: validity_start,
-                // validity_end: validity_end,
+                validity_start_period: validity_start.0,
+                validity_start_thread: validity_start.1,
+                validity_end_period: validity_end.0,
+                validity_end_thread: validity_end.1,
                 max_gas: max_gas,
                 gas_price: gas_price,
                 coins: coins,
                 data: data,
             }
         );
-        abi!("{}", json);
+        self.update_execution_trace(json)?;
         Ok(())
     }
 }

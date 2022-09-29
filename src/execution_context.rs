@@ -1,6 +1,7 @@
 const LEDGER_PATH: &str = "./ledger.json";
 
 use anyhow::{bail, Result};
+use json::JsonValue;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
@@ -137,23 +138,31 @@ pub struct AsyncMessage {
 
 type AsyncPool = BTreeMap<Slot, Vec<AsyncMessage>>;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub(crate) struct ExecutionContext {
     ledger: Arc<Mutex<Ledger>>,
     call_stack: Arc<Mutex<std::collections::VecDeque<CallItem>>>,
     owned: Arc<Mutex<std::collections::VecDeque<String>>>,
     async_pool: Arc<Mutex<AsyncPool>>,
+    execution_trace: Arc<Mutex<JsonValue>>,
     pub execution_slot: Slot,
 }
 
 impl ExecutionContext {
     pub(crate) fn new() -> Result<ExecutionContext> {
-        let mut ret = ExecutionContext::default();
-        if let Ok(file) = std::fs::File::open(LEDGER_PATH) {
-            let reader = std::io::BufReader::new(file);
-            ret.ledger = serde_json::from_reader(reader)?;
-        }
-        Ok(ret)
+        Ok(ExecutionContext {
+            ledger: if let Ok(file) = std::fs::File::open(LEDGER_PATH) {
+                let reader = std::io::BufReader::new(file);
+                serde_json::from_reader(reader)?
+            } else {
+                Default::default()
+            },
+            call_stack: Default::default(),
+            owned: Default::default(),
+            async_pool: Default::default(),
+            execution_slot: Default::default(),
+            execution_trace: Arc::new(Mutex::new(JsonValue::new_array())),
+        })
     }
     pub(crate) fn get_entry(&self, address: &str) -> Result<Entry> {
         match self.ledger.lock() {
@@ -264,6 +273,7 @@ impl ExecutionContext {
         match self.owned.lock() {
             Ok(mut owned) => {
                 owned.clear();
+                // TODO: think twice about this and call before updating callstack above
                 owned.push_back("sender".to_string());
             }
             Err(err) => bail!("Call stack error: {}", err),
@@ -304,6 +314,17 @@ impl ExecutionContext {
                 .flatten()
                 .collect()),
             Err(err) => bail!("Async pool error: {}", err),
+        }
+    }
+    pub(crate) fn update_execution_trace(&self, json: JsonValue) -> Result<()> {
+        match self.execution_trace.lock() {
+            Ok(mut trace) => {
+                if let Err(err) = trace.push(json) {
+                    bail!("Json error: {}", err)
+                }
+                Ok(())
+            }
+            Err(err) => bail!("Execution trace error: {}", err),
         }
     }
 }

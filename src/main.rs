@@ -3,7 +3,6 @@ mod interface_impl;
 
 use crate::execution_context::AsyncMessage;
 use anyhow::{bail, Result};
-use colored::Colorize;
 use execution_context::{CallItem, ExecutionContext, Slot};
 use indexmap::IndexMap;
 use massa_sc_runtime::{run_function, run_main};
@@ -13,21 +12,21 @@ use structopt::StructOpt;
 
 macro_rules! step_runner {
     ($($arg:tt)+) => {
-        print!("{} ", "STEP RUNNER".bold().yellow());
+        print!("{} ", "STEP RUNNER");
         println!($($arg)+);
     };
 }
 
 macro_rules! sc_runner {
     ($($arg:tt)+) => {
-        print!("{} ", "SC RUNNER".bold().green());
+        print!("{} ", "SC RUNNER");
         println!($($arg)+);
     };
 }
 
 macro_rules! message_runner {
     ($($arg:tt)+) => {
-        print!("{} ", "MESSAGE RUNNER".bold().blue());
+        print!("{} ", "MESSAGE RUNNER");
         println!($($arg)+);
     };
 }
