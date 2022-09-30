@@ -101,7 +101,7 @@ fn execute_step(
         data,
     } in exec_context.get_async_messages_to_execute()?
     {
-        let bytecode = exec_context.get_entry(&target_address)?.get_bytecode()?;
+        // set the call stack
         exec_context.reset_addresses()?;
         exec_context.call_stack_push(CallItem {
             address: sender_address,
@@ -111,6 +111,11 @@ fn execute_step(
             address: target_address,
             coins,
         })?;
+
+        // read the bytecode
+        let bytecode = exec_context.get_entry(&target_address)?.get_bytecode()?;
+
+        // execute the function
         let remaining_gas = run_function(
             &bytecode,
             gas,
@@ -118,6 +123,8 @@ fn execute_step(
             std::str::from_utf8(&data)?,
             exec_context,
         )?;
+
+        // push the message trace
         let json = object!(
             execute_message_function: {
                 name: target_handler,

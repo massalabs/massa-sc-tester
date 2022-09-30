@@ -40,6 +40,8 @@ pub(crate) enum StepConfig {
     ReadLedgerEntry {
         /// Entry address
         address: String,
+        /// Entry balance
+        balance: u64,
         /// Entry bytecode
         bytecode: bool,
         /// Entry datastore
@@ -48,6 +50,8 @@ pub(crate) enum StepConfig {
     WriteLedgerEntry {
         /// Entry address
         address: String,
+        /// Entry balance
+        balance: u64,
         /// Entry bytecode
         bytecode: Option<Vec<u8>>,
         /// Entry datastore
@@ -62,7 +66,6 @@ pub(crate) enum StepConfig {
         end: Option<Slot>,
     },
     WriteAsyncMessages {
-        /// Emitting address
         emitter_address: String,
         target_address: String,
         target_handler: String,
