@@ -120,13 +120,10 @@ fn execute_step(
             );
             trace.push(json)?;
         }
-        StepConfig::ReadEvents {
-            emitter_address,
-            start,
-            end,
-        } => {
+        StepConfig::ReadEvents { start, end } => {
             // TODO: IMPLEMENT EVENT POOL
             // TODO: INVESTIGATE MISSING COINS ISSUE
+            // TODO: DOCUMENT STEPS
             unimplemented!()
         }
         StepConfig::ReadLedgerEntry { address } => {
@@ -150,13 +147,12 @@ fn execute_step(
             )?;
         }
         StepConfig::ReadAsyncMessages { start, end } => {
-            let messages = exec_context.get_async_messages_in(start, end)?;
-            let json =
-                object!(read_async_messages: JsonValue::from(serde_json::to_string(&messages)?));
+            let msgs = exec_context.get_async_messages_in(start, end)?;
+            let json = object!(read_async_messages: JsonValue::from(serde_json::to_string(&msgs)?));
             trace.push(json)?;
         }
         StepConfig::WriteAsyncMessage {
-            emitter_address,
+            sender_address: emitter_address,
             target_address,
             target_handler,
             execution_slot,
@@ -166,7 +162,7 @@ fn execute_step(
         } => exec_context.push_async_message(
             execution_slot,
             AsyncMessage {
-                emitter_address,
+                sender_address: emitter_address,
                 target_address,
                 target_handler,
                 gas,
@@ -178,7 +174,7 @@ fn execute_step(
 
     // run the asynchronous messages
     for AsyncMessage {
-        emitter_address: sender_address,
+        sender_address,
         target_address,
         target_handler,
         gas,

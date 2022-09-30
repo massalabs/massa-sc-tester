@@ -115,7 +115,7 @@ impl Ord for Slot {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct AsyncMessage {
-    pub emitter_address: String,
+    pub sender_address: String,
     pub target_address: String,
     pub target_handler: String,
     pub gas: u64,
@@ -279,7 +279,7 @@ impl ExecutionContext {
         Ok(())
     }
     pub(crate) fn push_async_message(&self, slot: Slot, mut message: AsyncMessage) -> Result<()> {
-        message.emitter_address = self.call_stack_peek()?.address;
+        message.sender_address = self.call_stack_peek()?.address;
         match self.async_pool.lock() {
             Ok(mut async_pool) => {
                 async_pool

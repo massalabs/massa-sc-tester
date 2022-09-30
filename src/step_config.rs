@@ -32,8 +32,6 @@ pub(crate) enum StepConfig {
         call_stack: VecDeque<CallItem>,
     },
     ReadEvents {
-        /// Emitting address
-        emitter_address: Option<String>,
         /// Start slot
         start: Option<Slot>,
         /// End slot
@@ -60,7 +58,7 @@ pub(crate) enum StepConfig {
         end: Option<Slot>,
     },
     WriteAsyncMessage {
-        emitter_address: String,
+        sender_address: String,
         target_address: String,
         target_handler: String,
         execution_slot: Slot,
