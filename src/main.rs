@@ -5,7 +5,6 @@ mod step_config;
 use crate::execution_context::AsyncMessage;
 use anyhow::{bail, Result};
 use execution_context::{CallItem, ExecutionContext, Slot};
-use indexmap::IndexMap;
 use json::{object, JsonValue};
 use massa_sc_runtime::{run_function, run_main};
 use serde::Deserialize;
@@ -35,18 +34,10 @@ fn execute_step(
             gas,
             call_stack,
         } => {
-            // init the context for this step
+            // init the context
             exec_context.reset_addresses()?;
-            if let Some(stack) = call_stack {
-                for call_item in stack {
-                    exec_context.call_stack_push(call_item)?;
-                }
-            } else {
-                // TODO: MAKE CALL STACK MANDATORY
-                exec_context.call_stack_push(CallItem {
-                    address: "sender".to_string(),
-                    coins: 0,
-                })?;
+            for call_item in call_stack {
+                exec_context.call_stack_push(call_item)?;
             }
             exec_context.execution_slot = slot;
 
@@ -61,7 +52,7 @@ fn execute_step(
             }
             let module = fs::read(sc_path)?;
 
-            // run the function
+            // execute the function
             let (remaining_gas, function_name) = if let Some(function) = function {
                 (
                     run_function(
@@ -79,7 +70,50 @@ fn execute_step(
 
             // push the function trace
             let json = object!(
-                execute_function: {
+                execute_sc: {
+                    name: function_name,
+                    remaining_gas: remaining_gas,
+                    output: exec_context.take_execution_trace()?,
+                }
+            );
+            trace.push(json)?;
+        }
+        StepConfig::CallSC {
+            address,
+            function,
+            parameter,
+            gas,
+            call_stack,
+        } => {
+            // init the context
+            exec_context.reset_addresses()?;
+            for call_item in call_stack {
+                exec_context.call_stack_push(call_item)?;
+            }
+            exec_context.execution_slot = slot;
+
+            // read the bytecode
+            let bytecode = exec_context.get_entry(&address)?.get_bytecode()?;
+
+            // execute the function
+            let (remaining_gas, function_name) = if let Some(function) = function {
+                (
+                    run_function(
+                        &bytecode,
+                        gas,
+                        &function,
+                        &parameter.unwrap_or_default(),
+                        exec_context,
+                    )?,
+                    function,
+                )
+            } else {
+                (run_main(&bytecode, gas, exec_context)?, "main".to_string())
+            };
+
+            // push the function trace
+            let json = object!(
+                call_sc: {
                     name: function_name,
                     remaining_gas: remaining_gas,
                     output: exec_context.take_execution_trace()?,
@@ -108,7 +142,7 @@ fn execute_step(
             coins,
         })?;
         exec_context.call_stack_push(CallItem {
-            address: target_address,
+            address: target_address.clone(),
             coins,
         })?;
 
@@ -126,7 +160,7 @@ fn execute_step(
 
         // push the message trace
         let json = object!(
-            execute_message_function: {
+            execute_async_message: {
                 name: target_handler,
                 remaining_gas: remaining_gas,
                 output: exec_context.take_execution_trace()?,

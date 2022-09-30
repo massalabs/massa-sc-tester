@@ -1,6 +1,6 @@
 use crate::execution_context::{CallItem, Slot};
 use serde::Deserialize;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
@@ -15,7 +15,7 @@ pub(crate) enum StepConfig {
         /// Gas for execution
         gas: u64,
         /// ExecuteSC callstack
-        call_stack: Option<VecDeque<CallItem>>,
+        call_stack: VecDeque<CallItem>,
     },
     CallSC {
         /// Address of the smart contract
@@ -27,7 +27,7 @@ pub(crate) enum StepConfig {
         /// Gas for execution
         gas: u64,
         /// CallSC callstack
-        call_stack: Option<VecDeque<CallItem>>,
+        call_stack: VecDeque<CallItem>,
     },
     ReadEvents {
         /// Emitting address
@@ -40,18 +40,12 @@ pub(crate) enum StepConfig {
     ReadLedgerEntry {
         /// Entry address
         address: String,
-        /// Entry balance
-        balance: u64,
-        /// Entry bytecode
-        bytecode: bool,
-        /// Entry datastore
-        datastore_key: Option<BTreeSet<Vec<u8>>>,
     },
     WriteLedgerEntry {
         /// Entry address
         address: String,
         /// Entry balance
-        balance: u64,
+        balance: Option<u64>,
         /// Entry bytecode
         bytecode: Option<Vec<u8>>,
         /// Entry datastore

@@ -26,7 +26,13 @@
                     "path": "../massa-sc-examples/async-calls/build/smart-contract.wasm",
                     "function": "receive_and_send",
                     "parameter": "test",
-                    "gas": 100000
+                    "gas": 100000,
+                    "call_stack": [
+                        {
+                            "address": "X6Jqk749Dk8=",
+                            "coins": 100
+                        }
+                    ]
                 }
             }
         ]
