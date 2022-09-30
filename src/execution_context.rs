@@ -11,26 +11,20 @@ use std::{
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Entry {
-    pub(crate) database: std::collections::HashMap<String, Vec<u8>>,
-    pub(crate) bytecode: Option<Vec<u8>>,
     pub(crate) balance: u64,
+    pub(crate) bytecode: Vec<u8>,
+    pub(crate) datastore: BTreeMap<String, Vec<u8>>,
 }
 
 impl Entry {
-    pub(crate) fn get_bytecode(&self) -> Result<Vec<u8>> {
-        match &self.bytecode {
-            Some(bytecode) => Ok(bytecode.clone()),
-            _ => bail!("Error bytecode not found"),
-        }
+    pub(crate) fn get_bytecode(&self) -> Vec<u8> {
+        self.bytecode.clone()
     }
-    pub(crate) fn get_data(&self, key: &str) -> Result<Vec<u8>> {
-        match self.database.get(key) {
-            Some(bytecode) => Ok(bytecode.clone()),
-            _ => Ok(vec![]),
-        }
+    pub(crate) fn get_data(&self, key: &str) -> Vec<u8> {
+        self.datastore.get(key).cloned().unwrap_or_default()
     }
     pub(crate) fn has_data(&self, key: &str) -> bool {
-        self.database.contains_key(key)
+        self.datastore.contains_key(key)
     }
 }
 
@@ -49,7 +43,7 @@ impl Ledger {
             Ok(entry) => entry,
             _ => Entry::default(),
         };
-        entry.bytecode = Some(module.to_vec());
+        entry.bytecode = module.to_vec();
         self.0.insert(address.to_owned(), entry);
     }
     pub(crate) fn set_data_entry(&mut self, address: &str, key: String, value: Vec<u8>) {
@@ -57,7 +51,7 @@ impl Ledger {
             Ok(entry) => entry,
             _ => Entry::default(),
         };
-        entry.database.insert(key, value);
+        entry.datastore.insert(key, value);
         self.0.insert(address.to_owned(), entry);
     }
     pub(crate) fn sub(&mut self, address: &str, amount: u64) -> Result<()> {
@@ -155,6 +149,13 @@ impl ExecutionContext {
             execution_slot: Default::default(),
             execution_trace: Arc::new(Mutex::new(JsonValue::new_array())),
         })
+    }
+    pub(crate) fn create_new_entry(&self, address: String, entry: Entry) -> Result<()> {
+        match self.ledger.lock() {
+            Ok(mut ledger) => ledger.0.insert(address, entry),
+            Err(err) => bail!("create_entry error: {}", err),
+        };
+        Ok(())
     }
     pub(crate) fn get_entry(&self, address: &str) -> Result<Entry> {
         match self.ledger.lock() {

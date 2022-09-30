@@ -3,8 +3,9 @@ use serde::Deserialize;
 use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub(crate) enum StepConfig {
+    #[serde(rename = "execute_sc")]
     ExecuteSC {
         /// Path to the smart contract
         path: String,
@@ -17,6 +18,7 @@ pub(crate) enum StepConfig {
         /// ExecuteSC callstack
         call_stack: VecDeque<CallItem>,
     },
+    #[serde(rename = "call_sc")]
     CallSC {
         /// Address of the smart contract
         address: String,
@@ -49,7 +51,7 @@ pub(crate) enum StepConfig {
         /// Entry bytecode
         bytecode: Option<Vec<u8>>,
         /// Entry datastore
-        datastore: Option<BTreeMap<Vec<u8>, Vec<u8>>>,
+        datastore: Option<BTreeMap<String, Vec<u8>>>,
     },
     ReadAsyncMessages {
         /// Emitting address
@@ -59,7 +61,7 @@ pub(crate) enum StepConfig {
         /// End slot
         end: Option<Slot>,
     },
-    WriteAsyncMessages {
+    WriteAsyncMessage {
         emitter_address: String,
         target_address: String,
         target_handler: String,

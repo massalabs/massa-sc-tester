@@ -6,9 +6,17 @@
         },
         "execution_steps": [
             {
+                "name": "setup_initial_address",
+                "config": {
+                    "type": "write_ledger_entry",
+                    "address": "X6Jqk749Dk8=",
+                    "coins": 100
+                }
+            },
+            {
                 "name": "simple_step_name",
                 "config": {
-                    "type": "ExecuteSC",
+                    "type": "execute_sc",
                     "path": "../massa-sc-examples/async-calls/build/main.wasm",
                     "gas": 100000,
                     "call_stack": [
@@ -22,7 +30,7 @@
             {
                 "name": "special_step_name",
                 "config": {
-                    "type": "ExecuteSC",
+                    "type": "execute_sc",
                     "path": "../massa-sc-examples/async-calls/build/smart-contract.wasm",
                     "function": "receive_and_send",
                     "parameter": "test",

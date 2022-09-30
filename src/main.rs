@@ -4,7 +4,7 @@ mod step_config;
 
 use crate::execution_context::AsyncMessage;
 use anyhow::{bail, Result};
-use execution_context::{CallItem, ExecutionContext, Slot};
+use execution_context::{CallItem, Entry, ExecutionContext, Slot};
 use json::{object, JsonValue};
 use massa_sc_runtime::{run_function, run_main};
 use serde::Deserialize;
@@ -93,7 +93,7 @@ fn execute_step(
             exec_context.execution_slot = slot;
 
             // read the bytecode
-            let bytecode = exec_context.get_entry(&address)?.get_bytecode()?;
+            let bytecode = exec_context.get_entry(&address)?.get_bytecode();
 
             // execute the function
             let (remaining_gas, function_name) = if let Some(function) = function {
@@ -121,8 +121,53 @@ fn execute_step(
             );
             trace.push(json)?;
         }
-        // TODO: HANLDE OTHER STEPS TYPES
-        _ => (),
+        StepConfig::ReadEvents {
+            emitter_address,
+            start,
+            end,
+        } => {
+            // TODO: IMPLEMENT EVENT POOL
+            // TODO: INVESTIGATE MISSING COINS ISSUE
+            unimplemented!()
+        }
+        StepConfig::ReadLedgerEntry { address } => {
+            let entry = exec_context.get_entry(&address)?;
+            let json = object!(read_ledger_entry: JsonValue::from(serde_json::to_string(&entry)?));
+            trace.push(json)?;
+        }
+        StepConfig::WriteLedgerEntry {
+            address,
+            balance,
+            bytecode,
+            datastore,
+        } => {
+            exec_context.create_new_entry(
+                address,
+                Entry {
+                    balance: balance.unwrap_or_default(),
+                    bytecode: bytecode.unwrap_or_default(),
+                    datastore: datastore.unwrap_or_default(),
+                },
+            )?;
+        }
+        StepConfig::ReadAsyncMessages {
+            emitter_address,
+            start,
+            end,
+        } => {
+            let messages = "";
+        }
+        StepConfig::WriteAsyncMessage {
+            emitter_address,
+            target_address,
+            target_handler,
+            validity_start,
+            validity_end,
+            max_gas,
+            gas_price,
+            coins,
+            data,
+        } => (),
     }
 
     // run the asynchronous messages
@@ -147,7 +192,7 @@ fn execute_step(
         })?;
 
         // read the bytecode
-        let bytecode = exec_context.get_entry(&target_address)?.get_bytecode()?;
+        let bytecode = exec_context.get_entry(&target_address)?.get_bytecode();
 
         // execute the function
         let remaining_gas = run_function(

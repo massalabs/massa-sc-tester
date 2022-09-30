@@ -33,7 +33,7 @@ impl Interface for ExecutionContext {
             address: address.to_owned(),
             coins: raw_coins,
         })?;
-        entry.get_bytecode()
+        Ok(entry.get_bytecode())
     }
 
     /// Returns zero as a default if address not found.
@@ -91,7 +91,7 @@ impl Interface for ExecutionContext {
 
     /// Requires the data at the address
     fn raw_get_data_for(&self, address: &str, key: &str) -> Result<Vec<u8>> {
-        let data = self.get(address)?.get_data(key)?;
+        let data = self.get(address)?.get_data(key);
         let json = object!(
             raw_get_data_for: {
                 address: address,
@@ -126,7 +126,7 @@ impl Interface for ExecutionContext {
     }
 
     fn raw_get_data(&self, key: &str) -> Result<Vec<u8>> {
-        let data = self.get(&self.call_stack_peek()?.address)?.get_data(key)?;
+        let data = self.get(&self.call_stack_peek()?.address)?.get_data(key);
         let json = object!(
             raw_get_data: {
                 key: key,
