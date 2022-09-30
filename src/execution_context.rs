@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
+    ops::Bound,
     sync::{Arc, Mutex},
 };
 
@@ -112,9 +113,9 @@ impl Ord for Slot {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct AsyncMessage {
-    pub sender_address: String,
+    pub emitter_address: String,
     pub target_address: String,
     pub target_handler: String,
     pub gas: u64,
@@ -278,7 +279,7 @@ impl ExecutionContext {
         Ok(())
     }
     pub(crate) fn push_async_message(&self, slot: Slot, mut message: AsyncMessage) -> Result<()> {
-        message.sender_address = self.call_stack_peek()?.address;
+        message.emitter_address = self.call_stack_peek()?.address;
         match self.async_pool.lock() {
             Ok(mut async_pool) => {
                 async_pool
@@ -303,6 +304,31 @@ impl ExecutionContext {
                 })
                 .flatten()
                 .collect()),
+            Err(err) => bail!("get_async_messages_to_execute error: {}", err),
+        }
+    }
+    pub(crate) fn get_async_messages_in(
+        &self,
+        start: Option<Slot>,
+        end: Option<Slot>,
+    ) -> Result<Vec<AsyncMessage>> {
+        match self.async_pool.lock() {
+            Ok(async_pool) => {
+                let start_bound = if let Some(start) = start {
+                    Bound::Included(start)
+                } else {
+                    Bound::Unbounded
+                };
+                let end_bound = if let Some(end) = end {
+                    Bound::Excluded(end)
+                } else {
+                    Bound::Unbounded
+                };
+                Ok(async_pool
+                    .range((start_bound, end_bound))
+                    .flat_map(|(_, messages)| messages.clone())
+                    .collect())
+            }
             Err(err) => bail!("get_async_messages_to_execute error: {}", err),
         }
     }

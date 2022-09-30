@@ -22,7 +22,6 @@ fn execute_step(
     slot: Slot,
     config_step: StepConfig,
 ) -> Result<JsonValue> {
-    // init trace
     let mut trace = JsonValue::new_array();
 
     // match the config step
@@ -150,29 +149,36 @@ fn execute_step(
                 },
             )?;
         }
-        StepConfig::ReadAsyncMessages {
-            emitter_address,
-            start,
-            end,
-        } => {
-            let messages = "";
+        StepConfig::ReadAsyncMessages { start, end } => {
+            let messages = exec_context.get_async_messages_in(start, end)?;
+            let json =
+                object!(read_async_messages: JsonValue::from(serde_json::to_string(&messages)?));
+            trace.push(json)?;
         }
         StepConfig::WriteAsyncMessage {
             emitter_address,
             target_address,
             target_handler,
-            validity_start,
-            validity_end,
-            max_gas,
-            gas_price,
+            execution_slot,
+            gas,
             coins,
             data,
-        } => (),
+        } => exec_context.push_async_message(
+            execution_slot,
+            AsyncMessage {
+                emitter_address,
+                target_address,
+                target_handler,
+                gas,
+                coins,
+                data,
+            },
+        )?,
     }
 
     // run the asynchronous messages
     for AsyncMessage {
-        sender_address,
+        emitter_address: sender_address,
         target_address,
         target_handler,
         gas,

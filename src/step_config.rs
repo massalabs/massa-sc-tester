@@ -54,8 +54,6 @@ pub(crate) enum StepConfig {
         datastore: Option<BTreeMap<String, Vec<u8>>>,
     },
     ReadAsyncMessages {
-        /// Emitting address
-        emitter_address: Option<String>,
         /// Start slot
         start: Option<Slot>,
         /// End slot
@@ -65,10 +63,8 @@ pub(crate) enum StepConfig {
         emitter_address: String,
         target_address: String,
         target_handler: String,
-        validity_start: Slot,
-        validity_end: Slot,
-        max_gas: u64,
-        gas_price: u64,
+        execution_slot: Slot,
+        gas: u64,
         coins: u64,
         data: Vec<u8>,
     },
