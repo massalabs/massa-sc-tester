@@ -121,7 +121,7 @@ impl Interface for ExecutionContext {
             self.set_data_entry(address, key, value.to_vec())?;
             Ok(())
         } else {
-            bail!("You don't have the write access to this entry")
+            bail!("you do not have write access to this entry")
         }
     }
 
@@ -180,7 +180,7 @@ impl Interface for ExecutionContext {
             // cancel debit
             self.add(from_address, raw_amount)
                 .expect("credit failed after same-amount debit succeeded");
-            bail!("Error crediting destination balance: {}", err);
+            bail!("error crediting destination balance: {}", err);
         }
         let json = object!(
             transfer_coins_for: {
