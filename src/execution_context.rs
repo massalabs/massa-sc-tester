@@ -193,7 +193,6 @@ impl ExecutionContext {
     }
     pub(crate) fn call_stack_push(&self, item: CallItem) -> Result<()> {
         self.sub(&item.address, item.coins)?;
-        println!("{} | {}", item.address, item.coins);
         match self.call_stack.lock() {
             Ok(mut cs) => {
                 cs.push_back(item);
@@ -312,16 +311,9 @@ impl ExecutionContext {
     }
     pub(crate) fn get_async_messages_to_execute(&self) -> Result<Vec<AsyncMessage>> {
         match self.async_pool.lock() {
-            Ok(async_pool) => Ok(async_pool
-                .iter()
-                .filter_map(|(&slot, list)| {
-                    if slot <= self.execution_slot {
-                        Some(list.clone())
-                    } else {
-                        None
-                    }
-                })
-                .flatten()
+            Ok(mut async_pool) => Ok(async_pool
+                .drain_filter(|&slot, _| slot <= self.execution_slot)
+                .flat_map(|(_, messages)| messages.clone())
                 .collect()),
             Err(err) => bail!("get_async_messages_to_execute lock error: {}", err),
         }
