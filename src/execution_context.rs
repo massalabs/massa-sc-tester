@@ -30,59 +30,69 @@ impl Entry {
 }
 
 #[derive(Clone, Deserialize, Serialize, Default)]
-pub(crate) struct Ledger(std::collections::BTreeMap<String, Entry>);
+pub(crate) struct Ledger(pub BTreeMap<String, Entry>);
 
 impl Ledger {
     pub(crate) fn get(&self, address: &str) -> Result<Entry> {
         match self.0.get(address) {
             Some(entry) => Ok(entry.clone()),
-            _ => bail!("Entry {} not found", address),
+            _ => bail!("ledger entry {} not found", address),
         }
     }
     pub(crate) fn set_module(&mut self, address: &str, module: &[u8]) {
-        let mut entry = match self.get(address) {
-            Ok(entry) => entry,
-            _ => Entry::default(),
-        };
-        entry.bytecode = module.to_vec();
-        self.0.insert(address.to_owned(), entry);
+        self.0
+            .entry(address.to_string())
+            .and_modify(|entry| entry.bytecode = module.to_vec())
+            .or_insert_with(|| Entry {
+                bytecode: module.to_vec(),
+                ..Default::default()
+            });
     }
     pub(crate) fn set_data_entry(&mut self, address: &str, key: String, value: Vec<u8>) {
-        let mut entry = match self.get(address) {
-            Ok(entry) => entry,
-            _ => Entry::default(),
-        };
-        entry.datastore.insert(key, value);
-        self.0.insert(address.to_owned(), entry);
+        self.0
+            .entry(address.to_string())
+            .and_modify(|entry| {
+                entry.datastore.insert(key.clone(), value.clone());
+            })
+            .or_insert_with(|| {
+                let mut datastore = BTreeMap::new();
+                datastore.insert(key, value);
+                Entry {
+                    datastore,
+                    ..Default::default()
+                }
+            });
     }
     pub(crate) fn sub(&mut self, address: &str, amount: u64) -> Result<()> {
-        let entry = match self.get(address) {
-            Ok(entry) => entry,
-            _ => bail!("Cannot find address {} in the ledger", address),
+        let entry = match self.0.get_mut(address) {
+            Some(entry) => entry,
+            None => bail!("cannot find {} in the ledger", address),
         };
-        if entry.balance.checked_sub(amount).is_none() {
+        if let Some(balance) = entry.balance.checked_sub(amount) {
+            entry.balance = balance;
+        } else {
             bail!(
-                "Failed to set balance substraction for {} of amount {} in the ledger",
+                "cannot sub {} coins to {}, balance is too low",
+                amount,
                 address,
-                amount
             )
         }
-        self.0.insert(address.to_string(), entry);
         Ok(())
     }
     pub(crate) fn add(&mut self, address: &str, amount: u64) -> Result<()> {
-        let entry = match self.get(address) {
-            Ok(entry) => entry,
-            _ => bail!("Cannot find address {} in the ledger", address),
+        let entry = match self.0.get_mut(address) {
+            Some(entry) => entry,
+            None => bail!("cannot find {} in the ledger", address),
         };
-        if entry.balance.checked_add(amount).is_none() {
+        if let Some(balance) = entry.balance.checked_add(amount) {
+            entry.balance = balance;
+        } else {
             bail!(
-                "Failed to set balance substraction for {} of amount {} in the ledger",
+                "cannot add {} coins to {}, it would overflow",
+                amount,
                 address,
-                amount
             )
         }
-        self.0.insert(address.to_string(), entry);
         Ok(())
     }
 }
@@ -182,6 +192,8 @@ impl ExecutionContext {
         }
     }
     pub(crate) fn call_stack_push(&self, item: CallItem) -> Result<()> {
+        self.sub(&item.address, item.coins)?;
+        println!("{} | {}", item.address, item.coins);
         match self.call_stack.lock() {
             Ok(mut cs) => {
                 cs.push_back(item);

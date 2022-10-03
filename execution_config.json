@@ -10,7 +10,7 @@
                 "config": {
                     "type": "write_ledger_entry",
                     "address": "X6Jqk749Dk8=",
-                    "balance": 200100
+                    "balance": 200000
                 }
             },
             {

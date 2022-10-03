@@ -303,7 +303,7 @@ fn main(args: CommandArguments) -> Result<()> {
         ))?;
     }
 
-    // print the trace
+    // write the trace
     let mut file = fs::File::create("trace.json")?;
     trace.write_pretty(&mut file, 4)?;
     Ok(())
