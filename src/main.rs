@@ -121,8 +121,6 @@ fn execute_step(
             trace.push(json)?;
         }
         StepConfig::ReadEvents { start, end } => {
-            // TODO: INVESTIGATE MISSING COINS ISSUE
-            // TODO: DOCUMENT STEPS
             let events = exec_context.get_events_in(start, end)?;
             let json = object!(read_events: JsonValue::from(serde_json::to_string(&events)?));
             trace.push(json)?;

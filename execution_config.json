@@ -10,7 +10,7 @@
                 "config": {
                     "type": "write_ledger_entry",
                     "address": "X6Jqk749Dk8=",
-                    "coins": 100
+                    "balance": 200100
                 }
             },
             {
@@ -18,22 +18,6 @@
                 "config": {
                     "type": "execute_sc",
                     "path": "../massa-sc-examples/async-calls/build/main.wasm",
-                    "gas": 100000,
-                    "call_stack": [
-                        {
-                            "address": "X6Jqk749Dk8=",
-                            "coins": 100
-                        }
-                    ]
-                }
-            },
-            {
-                "name": "special_step_name",
-                "config": {
-                    "type": "execute_sc",
-                    "path": "../massa-sc-examples/async-calls/build/smart-contract.wasm",
-                    "function": "receive_and_send",
-                    "parameter": "test",
                     "gas": 100000,
                     "call_stack": [
                         {
