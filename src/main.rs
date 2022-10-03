@@ -121,10 +121,11 @@ fn execute_step(
             trace.push(json)?;
         }
         StepConfig::ReadEvents { start, end } => {
-            // TODO: IMPLEMENT EVENT POOL
             // TODO: INVESTIGATE MISSING COINS ISSUE
             // TODO: DOCUMENT STEPS
-            unimplemented!()
+            let events = exec_context.get_events_in(start, end)?;
+            let json = object!(read_events: "");
+            trace.push(json)?;
         }
         StepConfig::ReadLedgerEntry { address } => {
             let entry = exec_context.get_entry(&address)?;

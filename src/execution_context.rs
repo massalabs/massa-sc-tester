@@ -125,12 +125,15 @@ pub struct AsyncMessage {
 
 type AsyncPool = BTreeMap<Slot, Vec<AsyncMessage>>;
 
+type EventPool = BTreeMap<Slot, Vec<(String, String)>>;
+
 #[derive(Clone)]
 pub(crate) struct ExecutionContext {
     ledger: Arc<Mutex<Ledger>>,
     call_stack: Arc<Mutex<std::collections::VecDeque<CallItem>>>,
     owned: Arc<Mutex<std::collections::VecDeque<String>>>,
     async_pool: Arc<Mutex<AsyncPool>>,
+    event_pool: Arc<Mutex<EventPool>>,
     execution_trace: Arc<Mutex<JsonValue>>,
     pub execution_slot: Slot,
 }
@@ -148,26 +151,27 @@ impl ExecutionContext {
             owned: Default::default(),
             async_pool: Default::default(),
             execution_slot: Default::default(),
+            event_pool: Default::default(),
             execution_trace: Arc::new(Mutex::new(JsonValue::new_array())),
         })
     }
     pub(crate) fn create_new_entry(&self, address: String, entry: Entry) -> Result<()> {
         match self.ledger.lock() {
             Ok(mut ledger) => ledger.0.insert(address, entry),
-            Err(err) => bail!("create_entry error: {}", err),
+            Err(err) => bail!("create_entry lock error: {}", err),
         };
         Ok(())
     }
     pub(crate) fn get_entry(&self, address: &str) -> Result<Entry> {
         match self.ledger.lock() {
             Ok(ledger) => ledger.get(address),
-            Err(err) => bail!("get_entry error: {}", err),
+            Err(err) => bail!("get_entry lock error: {}", err),
         }
     }
     pub(crate) fn save(&self) -> Result<()> {
         let str = serde_json::to_string_pretty(&self.ledger)?;
         match std::fs::write(LEDGER_PATH, str) {
-            Err(error) => bail!("save error:\n{}", error),
+            Err(error) => bail!("save lock error: {}", error),
             _ => Ok(()),
         }
     }
@@ -177,7 +181,7 @@ impl ExecutionContext {
                 cs.push_back(item);
                 Ok(())
             }
-            Err(err) => bail!("call_stack_push error: {}", err),
+            Err(err) => bail!("call_stack_push lock error: {}", err),
         }
     }
     pub(crate) fn call_stack_pop(&self) -> Result<()> {
@@ -188,7 +192,7 @@ impl ExecutionContext {
                 }
                 Ok(())
             }
-            Err(err) => bail!("call_stack_pop error: {}", err),
+            Err(err) => bail!("call_stack_pop lock error: {}", err),
         }
     }
     pub(crate) fn call_stack_peek(&self) -> Result<CallItem> {
@@ -197,7 +201,7 @@ impl ExecutionContext {
                 Some(item) => Ok(item.clone()),
                 None => bail!("call_stack_peek failed"),
             },
-            Err(err) => bail!("call_stack_peek error: {}", err),
+            Err(err) => bail!("call_stack_peek lock error: {}", err),
         }
     }
     pub(crate) fn set_data_entry(&self, address: &str, key: &str, value: Vec<u8>) -> Result<()> {
@@ -206,13 +210,13 @@ impl ExecutionContext {
                 ledger.set_data_entry(address, key.to_string(), value);
                 Ok(())
             }
-            Err(err) => bail!("set_data_entry error: {}", err),
+            Err(err) => bail!("set_data_entry lock error: {}", err),
         }
     }
     pub(crate) fn get(&self, address: &str) -> Result<Entry> {
         match self.ledger.lock() {
             Ok(ledger) => ledger.get(address),
-            Err(err) => bail!("get error: {}", err),
+            Err(err) => bail!("get lock error: {}", err),
         }
     }
     pub(crate) fn set_module(&self, address: &str, module: &[u8]) -> Result<()> {
@@ -221,37 +225,37 @@ impl ExecutionContext {
                 ledger.set_module(address, module);
                 Ok(())
             }
-            Err(err) => bail!("set_module error: {}", err),
+            Err(err) => bail!("set_module lock error: {}", err),
         }
     }
     pub(crate) fn sub(&self, address: &str, amount: u64) -> Result<()> {
         match self.ledger.lock() {
             Ok(mut ledger) => ledger.sub(address, amount),
-            Err(err) => bail!("sub error: {}", err),
+            Err(err) => bail!("sub lock error: {}", err),
         }
     }
     pub(crate) fn add(&self, address: &str, amount: u64) -> Result<()> {
         match self.ledger.lock() {
             Ok(mut ledger) => Ok(ledger.add(address, amount)?),
-            Err(err) => bail!("add error: {}", err),
+            Err(err) => bail!("add lock error: {}", err),
         }
     }
     pub(crate) fn callstack_to_vec(&self) -> Result<Vec<String>> {
         match self.call_stack.lock() {
             Ok(cs) => Ok(cs.iter().map(|item| item.address.to_owned()).collect()),
-            Err(err) => bail!("callstack_to_vec error: {}", err),
+            Err(err) => bail!("callstack_to_vec lock error: {}", err),
         }
     }
     pub(crate) fn owned_to_vec(&self) -> Result<Vec<String>> {
         match self.owned.lock() {
             Ok(owned) => Ok(owned.clone().into()),
-            Err(err) => bail!("owned_to_vec error: {}", err),
+            Err(err) => bail!("owned_to_vec lock error: {}", err),
         }
     }
     pub(crate) fn own(&self, address: &str) -> Result<bool> {
         match self.owned.lock() {
             Ok(owned) => Ok(owned.contains(&address.to_owned())),
-            Err(err) => bail!("own error: {}", err),
+            Err(err) => bail!("own lock error: {}", err),
         }
     }
     pub(crate) fn own_insert(&self, address: &str) -> Result<()> {
@@ -260,7 +264,7 @@ impl ExecutionContext {
                 owned.push_back(address.to_string());
                 Ok(())
             }
-            Err(err) => bail!("own_insert error: {}", err),
+            Err(err) => bail!("own_insert lock error: {}", err),
         }
     }
     pub(crate) fn reset_addresses(&self) -> Result<()> {
@@ -268,27 +272,25 @@ impl ExecutionContext {
             Ok(mut owned) => {
                 owned.clear();
             }
-            Err(err) => bail!("reset_addresses error: {}", err),
+            Err(err) => bail!("reset_addresses lock error: {}", err),
         };
         match self.call_stack.lock() {
             Ok(mut call_stack) => {
                 call_stack.clear();
             }
-            Err(err) => bail!("reset_addresses error: {}", err),
+            Err(err) => bail!("reset_addresses lock error: {}", err),
         };
         Ok(())
     }
     pub(crate) fn push_async_message(&self, slot: Slot, mut message: AsyncMessage) -> Result<()> {
         message.sender_address = self.call_stack_peek()?.address;
         match self.async_pool.lock() {
-            Ok(mut async_pool) => {
-                async_pool
-                    .entry(slot)
-                    .and_modify(|list| list.push(message.clone()))
-                    .or_insert_with(|| vec![message]);
-            }
-            Err(err) => bail!("push_async_message error: {}", err),
-        }
+            Ok(mut async_pool) => async_pool
+                .entry(slot)
+                .and_modify(|list| list.push(message.clone()))
+                .or_insert_with(|| vec![message]),
+            Err(err) => bail!("push_async_message lock error: {}", err),
+        };
         Ok(())
     }
     pub(crate) fn get_async_messages_to_execute(&self) -> Result<Vec<AsyncMessage>> {
@@ -304,7 +306,7 @@ impl ExecutionContext {
                 })
                 .flatten()
                 .collect()),
-            Err(err) => bail!("get_async_messages_to_execute error: {}", err),
+            Err(err) => bail!("get_async_messages_to_execute lock error: {}", err),
         }
     }
     pub(crate) fn get_async_messages_in(
@@ -329,7 +331,7 @@ impl ExecutionContext {
                     .flat_map(|(_, messages)| messages.clone())
                     .collect())
             }
-            Err(err) => bail!("get_async_messages_to_execute error: {}", err),
+            Err(err) => bail!("get_async_messages_to_execute lock error: {}", err),
         }
     }
     pub(crate) fn update_execution_trace(&self, json: JsonValue) -> Result<()> {
@@ -340,7 +342,42 @@ impl ExecutionContext {
                 }
                 Ok(())
             }
-            Err(err) => bail!("update_execution_trace error: {}", err),
+            Err(err) => bail!("update_execution_trace lock error: {}", err),
+        }
+    }
+    pub(crate) fn push_event(&self, slot: Slot, emitter: String, data: String) -> Result<()> {
+        match self.event_pool.lock() {
+            Ok(mut event_pool) => event_pool
+                .entry(slot)
+                .and_modify(|list| list.push((emitter.clone(), data.clone())))
+                .or_insert_with(|| vec![(emitter, data)]),
+            Err(err) => bail!("push_event lock error: {}", err),
+        };
+        Ok(())
+    }
+    pub(crate) fn get_events_in(
+        &self,
+        start: Option<Slot>,
+        end: Option<Slot>,
+    ) -> Result<Vec<(String, String)>> {
+        match self.event_pool.lock() {
+            Ok(event_pool) => {
+                let start_bound = if let Some(start) = start {
+                    Bound::Included(start)
+                } else {
+                    Bound::Unbounded
+                };
+                let end_bound = if let Some(end) = end {
+                    Bound::Excluded(end)
+                } else {
+                    Bound::Unbounded
+                };
+                Ok(event_pool
+                    .range((start_bound, end_bound))
+                    .flat_map(|(_, messages)| messages.clone())
+                    .collect())
+            }
+            Err(err) => bail!("get_events_in lock error: {}", err),
         }
     }
     pub(crate) fn take_execution_trace(&self) -> Result<JsonValue> {
@@ -350,7 +387,7 @@ impl ExecutionContext {
                 trace.clear();
                 Ok(ret_trace)
             }
-            Err(err) => bail!("take_execution_trace error: {}", err),
+            Err(err) => bail!("take_execution_trace lock error: {}", err),
         }
     }
 }
