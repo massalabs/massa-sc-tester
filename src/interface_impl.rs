@@ -217,6 +217,8 @@ impl Interface for ExecutionContext {
     }
 
     fn generate_event(&self, data: String) -> Result<()> {
+        let sender = self.call_stack_peek()?.address;
+        self.push_event(self.execution_slot, sender, data.clone())?;
         let json = object!(
             generate_event: {
                 return_value: data
@@ -326,13 +328,14 @@ impl Interface for ExecutionContext {
         coins: u64,
         data: &[u8],
     ) -> Result<()> {
+        let sender = self.call_stack_peek()?.address;
         self.push_async_message(
             Slot {
                 period: validity_start.0,
                 thread: validity_start.1,
             },
             AsyncMessage {
-                sender_address: "".to_string(),
+                sender_address: sender.clone(),
                 target_address: target_address.to_string(),
                 target_handler: target_handler.to_string(),
                 gas: max_gas,
@@ -342,6 +345,7 @@ impl Interface for ExecutionContext {
         )?;
         let json = object!(
             send_message: {
+                sender_address: sender,
                 target_address: target_address,
                 target_handler: target_handler,
                 validity_start: {

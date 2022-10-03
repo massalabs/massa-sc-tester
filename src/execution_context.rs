@@ -125,7 +125,13 @@ pub struct AsyncMessage {
 
 type AsyncPool = BTreeMap<Slot, Vec<AsyncMessage>>;
 
-type EventPool = BTreeMap<Slot, Vec<(String, String)>>;
+#[derive(Clone, Debug, Serialize)]
+pub struct Event {
+    sender_address: String,
+    data: String,
+}
+
+type EventPool = BTreeMap<Slot, Vec<Event>>;
 
 #[derive(Clone)]
 pub(crate) struct ExecutionContext {
@@ -282,8 +288,7 @@ impl ExecutionContext {
         };
         Ok(())
     }
-    pub(crate) fn push_async_message(&self, slot: Slot, mut message: AsyncMessage) -> Result<()> {
-        message.sender_address = self.call_stack_peek()?.address;
+    pub(crate) fn push_async_message(&self, slot: Slot, message: AsyncMessage) -> Result<()> {
         match self.async_pool.lock() {
             Ok(mut async_pool) => async_pool
                 .entry(slot)
@@ -345,12 +350,18 @@ impl ExecutionContext {
             Err(err) => bail!("update_execution_trace lock error: {}", err),
         }
     }
-    pub(crate) fn push_event(&self, slot: Slot, emitter: String, data: String) -> Result<()> {
+    pub(crate) fn push_event(&self, slot: Slot, addr: String, data: String) -> Result<()> {
         match self.event_pool.lock() {
-            Ok(mut event_pool) => event_pool
-                .entry(slot)
-                .and_modify(|list| list.push((emitter.clone(), data.clone())))
-                .or_insert_with(|| vec![(emitter, data)]),
+            Ok(mut event_pool) => {
+                let event = Event {
+                    sender_address: addr,
+                    data,
+                };
+                event_pool
+                    .entry(slot)
+                    .and_modify(|list| list.push(event.clone()))
+                    .or_insert_with(|| vec![event]);
+            }
             Err(err) => bail!("push_event lock error: {}", err),
         };
         Ok(())
@@ -359,7 +370,7 @@ impl ExecutionContext {
         &self,
         start: Option<Slot>,
         end: Option<Slot>,
-    ) -> Result<Vec<(String, String)>> {
+    ) -> Result<Vec<Event>> {
         match self.event_pool.lock() {
             Ok(event_pool) => {
                 let start_bound = if let Some(start) = start {
@@ -374,7 +385,7 @@ impl ExecutionContext {
                 };
                 Ok(event_pool
                     .range((start_bound, end_bound))
-                    .flat_map(|(_, messages)| messages.clone())
+                    .flat_map(|(_, events)| events.clone())
                     .collect())
             }
             Err(err) => bail!("get_events_in lock error: {}", err),

@@ -124,7 +124,7 @@ fn execute_step(
             // TODO: INVESTIGATE MISSING COINS ISSUE
             // TODO: DOCUMENT STEPS
             let events = exec_context.get_events_in(start, end)?;
-            let json = object!(read_events: "");
+            let json = object!(read_events: JsonValue::from(serde_json::to_string(&events)?));
             trace.push(json)?;
         }
         StepConfig::ReadLedgerEntry { address } => {
