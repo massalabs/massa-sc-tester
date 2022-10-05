@@ -20,7 +20,7 @@ use step_config::StepConfig;
 use structopt::StructOpt;
 
 // TODO: update read steps output formatting
-// TODO: write README.md
+// TODO: improve README.md
 // TODO: add step info on execution config error
 // TODO: implement storage costs
 // TODO: use massa-node cryptography
