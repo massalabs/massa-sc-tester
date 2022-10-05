@@ -10,7 +10,7 @@
                 "config": {
                     "type": "write_ledger_entry",
                     "address": "X6Jqk749Dk8=",
-                    "balance": 44000000000000
+                    "balance": 789000
                 }
             },
             {
@@ -24,7 +24,7 @@
                     "call_stack": [
                         {
                             "address": "X6Jqk749Dk8=",
-                            "coins": 44000000000000
+                            "coins": 100
                         }
                     ]
                 }
@@ -40,7 +40,7 @@
                     "call_stack": [
                         {
                             "address": "X6Jqk749Dk8=",
-                            "coins": 44000000000000
+                            "coins": 100
                         }
                     ]
                 }
@@ -79,7 +79,7 @@
                     },
                     "gas": 100000,
                     "coins": 100,
-                    "data": ""
+                    "data": "hello from the otherside"
                 }
             },
             {
