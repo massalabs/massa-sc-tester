@@ -79,6 +79,22 @@
                         "thread": 12
                     }
                 }
+            },
+            {
+                "name": "write_new_random_async_message",
+                "config": {
+                    "type": "write_async_message",
+                    "sender_address": "X6Jqk749Dk8=",
+                    "target_address": "YSVIiUXnmrg=",
+                    "target_handler": "receive_function",
+                    "execution_slot": {
+                        "period": 0,
+                        "thread": 0
+                    },
+                    "gas": 100000,
+                    "coins": 100,
+                    "data": ""
+                }
             }
         ]
     }
