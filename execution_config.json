@@ -10,7 +10,7 @@
                 "config": {
                     "type": "write_ledger_entry",
                     "address": "X6Jqk749Dk8=",
-                    "balance": 200000
+                    "balance": 44000000000000
                 }
             },
             {
@@ -24,7 +24,7 @@
                     "call_stack": [
                         {
                             "address": "X6Jqk749Dk8=",
-                            "coins": 100
+                            "coins": 44000000000000
                         }
                     ]
                 }
@@ -33,14 +33,14 @@
                 "name": "call_function",
                 "config": {
                     "type": "call_sc",
-                    "address": "YSVIiUXnmrg=",
+                    "address": "yvgsOkbC54I=",
                     "function": "receive_and_send",
                     "parameter": "test",
                     "gas": 100000,
                     "call_stack": [
                         {
                             "address": "X6Jqk749Dk8=",
-                            "coins": 100
+                            "coins": 44000000000000
                         }
                     ]
                 }
@@ -67,7 +67,23 @@
                 }
             },
             {
-                "name": "read_messages_after_execution",
+                "name": "write_new_random_async_message",
+                "config": {
+                    "type": "write_async_message",
+                    "sender_address": "X6Jqk749Dk8=",
+                    "target_address": "yvgsOkbC54I=",
+                    "target_handler": "receive_and_send",
+                    "execution_slot": {
+                        "period": 2,
+                        "thread": 6
+                    },
+                    "gas": 100000,
+                    "coins": 100,
+                    "data": ""
+                }
+            },
+            {
+                "name": "read_all_messages_after_steps",
                 "config": {
                     "type": "read_async_messages",
                     "start": {
@@ -78,22 +94,6 @@
                         "period": 8,
                         "thread": 12
                     }
-                }
-            },
-            {
-                "name": "write_new_random_async_message",
-                "config": {
-                    "type": "write_async_message",
-                    "sender_address": "X6Jqk749Dk8=",
-                    "target_address": "YSVIiUXnmrg=",
-                    "target_handler": "receive_function",
-                    "execution_slot": {
-                        "period": 0,
-                        "thread": 0
-                    },
-                    "gas": 100000,
-                    "coins": 100,
-                    "data": ""
                 }
             }
         ]

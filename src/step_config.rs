@@ -64,6 +64,6 @@ pub(crate) enum StepConfig {
         execution_slot: Slot,
         gas: u64,
         coins: u64,
-        data: Vec<u8>,
+        data: String,
     },
 }

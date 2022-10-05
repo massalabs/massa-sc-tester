@@ -192,7 +192,6 @@ impl ExecutionContext {
         }
     }
     pub(crate) fn call_stack_push(&self, item: CallItem) -> Result<()> {
-        self.sub(&item.address, item.coins)?;
         match self.call_stack.lock() {
             Ok(mut cs) => {
                 cs.push_back(item);
