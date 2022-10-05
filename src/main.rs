@@ -19,6 +19,12 @@ use std::{
 use step_config::StepConfig;
 use structopt::StructOpt;
 
+// TODO: update read steps output formatting
+// TODO: write README.md
+// TODO: add step info on execution config error
+// TODO: implement storage costs
+// TODO: use massa-node cryptography
+
 fn execute_step(
     exec_context: &mut ExecutionContext,
     slot: Slot,
@@ -124,13 +130,11 @@ fn execute_step(
         }
         StepConfig::ReadEvents { start, end } => {
             let events = exec_context.get_events_in(start, end)?;
-            // TODO: update this formatting
             let json = object!(read_events: JsonValue::from(serde_json::to_string(&events)?));
             trace.push(json)?;
         }
         StepConfig::ReadLedgerEntry { address } => {
             let entry = exec_context.get_entry(&address)?;
-            // TODO: update this formatting
             let json = object!(read_ledger_entry: JsonValue::from(serde_json::to_string(&entry)?));
             trace.push(json)?;
         }
@@ -151,7 +155,6 @@ fn execute_step(
         }
         StepConfig::ReadAsyncMessages { start, end } => {
             let msgs = exec_context.get_async_messages_in(start, end)?;
-            // TODO: update this formatting
             let json = object!(read_async_messages: JsonValue::from(serde_json::to_string(&msgs)?));
             trace.push(json)?;
         }
