@@ -1,110 +1,116 @@
-use anyhow::{bail, Result};
-use massa_sc_runtime::{run_function, run_main};
-use std::{collections::HashMap, env, fs, path::Path};
+#![feature(btree_drain_filter)]
 
+mod execution_context;
 mod interface_impl;
-mod ledger_interface;
-mod types;
+mod step;
+mod step_config;
 
-use ledger_interface::{CallItem, InterfaceImpl};
+use crate::step::execute_step;
+use anyhow::{bail, Result};
+use execution_context::{ExecutionContext, Slot};
+use json::{object, JsonValue};
+use serde::Deserialize;
+use std::{
+    cmp::Ordering,
+    collections::{BTreeSet, VecDeque},
+    fs,
+    path::Path,
+};
+use step_config::StepConfig;
+use structopt::StructOpt;
 
-pub struct Arguments {
-    filename: String,
-    module: Vec<u8>,
-    function: Option<(String, String)>,
-    caller: Option<CallItem>,
+// TODO: add WASM target support
+// TODO: update read steps output formatting
+// TODO: improve README.md
+// TODO: add step info on execution config error
+// TODO: implement storage costs
+// TODO: use massa-node cryptography
+
+#[derive(Debug, Deserialize)]
+struct Step {
+    name: String,
+    config: StepConfig,
 }
 
-fn parse_arguments() -> Result<Arguments> {
-    // collect the arguments
-    let args: Vec<String> = env::args().collect();
-    let len = args.len();
-    println!("{}", len);
-    if !(2..=5).contains(&len) {
-        bail!("invalid number of arguments")
-    }
+#[derive(Debug, Deserialize)]
+struct SlotExecutionSteps {
+    slot: Slot,
+    execution_steps: VecDeque<Step>,
+}
 
-    // parse the file
-    let name = args[1].clone();
-    let path = Path::new(&name);
+impl PartialOrd for SlotExecutionSteps {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.slot.partial_cmp(&other.slot)
+    }
+}
+
+impl Ord for SlotExecutionSteps {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.slot.cmp(&other.slot)
+    }
+}
+
+impl PartialEq for SlotExecutionSteps {
+    fn eq(&self, other: &Self) -> bool {
+        self.slot.eq(&other.slot)
+    }
+}
+
+impl Eq for SlotExecutionSteps {}
+
+#[derive(StructOpt)]
+struct CommandArguments {
+    /// Path to the execution config
+    config_path: String,
+}
+
+#[paw::main]
+fn main(args: CommandArguments) -> Result<()> {
+    // create the context
+    let mut exec_context = ExecutionContext::new()?;
+
+    // parse the config file
+    let path = Path::new(&args.config_path);
     if !path.is_file() {
-        bail!("{} isn't file", name)
+        bail!("{} isn't a file", args.config_path)
     }
     let extension = path.extension().unwrap_or_default();
-    if extension != "wasm" {
-        bail!("{} should be .wasm", name)
+    if extension != "json" {
+        bail!("{} extension should be .json", args.config_path)
     }
-    let bin = fs::read(path)?;
+    let config_slice = fs::read(path)?;
+    let executions_config: BTreeSet<SlotExecutionSteps> = serde_json::from_slice(&config_slice)?;
 
-    // parse the configuration parameters
-    let p_list: [&str; 4] = ["function", "param", "addr", "coins"];
-    let mut p: HashMap<String, String> = HashMap::new();
-    for v in args.iter().skip(2) {
-        if let Some(index) = v.find('=') {
-            let s: (&str, &str) = v.split_at(index);
-            if p_list.contains(&s.0) {
-                p.insert(s.0.to_string(), s.1[1..].to_string());
-            } else {
-                bail!("this option does not exist");
-            }
-        } else {
-            bail!("invalid option format");
+    // execute the steps
+    let mut trace = JsonValue::new_array();
+    for SlotExecutionSteps {
+        slot,
+        execution_steps,
+    } in executions_config
+    {
+        let mut slot_trace = JsonValue::new_array();
+        for Step { name, config } in execution_steps {
+            let step_trace = execute_step(&mut exec_context, slot, config)?;
+            slot_trace.push(object!(
+                execute_step: {
+                    name: name,
+                    output: step_trace
+                }
+            ))?;
         }
-    }
-
-    // return parsed arguments
-    Ok(Arguments {
-        filename: path.to_str().unwrap().to_string(),
-        module: bin,
-        function: match (
-            p.get_key_value("function").map(|x| x.1.clone()),
-            p.get_key_value("param").map(|x| x.1.clone()),
-        ) {
-            (Some(function), Some(param)) => Some((function, param)),
-            (Some(function), None) => Some((function, "".to_string())),
-            _ => None,
-        },
-        caller: match (
-            p.get_key_value("addr").map(|x| x.1.clone()),
-            p.get_key_value("coins").map(|x| x.1.clone()),
-        ) {
-            (Some(address), Some(coins)) => Some(CallItem {
-                address,
-                coins: if let Ok(coins) = coins.parse::<u64>() {
-                    coins
-                } else {
-                    println!("invalid coins, will be set to 0");
-                    0
+        trace.push(object!(
+            execute_slot: {
+                execution_slot: {
+                    period: slot.period,
+                    thread: slot.thread
                 },
-            }),
-            (Some(address), None) => Some(CallItem { address, coins: 0 }),
-            _ => None,
-        },
-    })
-}
-
-fn main() -> Result<()> {
-    let args: Arguments = parse_arguments()?;
-    let ledger_context = InterfaceImpl::new()?;
-    ledger_context.reset_addresses()?;
-    if let Some(caller) = args.caller {
-        ledger_context.call_stack_push(caller)?;
+                output: slot_trace
+            }
+        ))?;
     }
-    println!("run {}", args.filename);
-    println!(
-        "remaining points: {}",
-        if let Some((name, param)) = args.function {
-            run_function(
-                &args.module,
-                1_000_000_000_000,
-                &name,
-                &param,
-                &ledger_context,
-            )?
-        } else {
-            run_main(&args.module, 1_000_000_000_000, &ledger_context)?
-        }
-    );
-    ledger_context.save()?;
+
+    // write the trace
+    let mut file = fs::File::create("trace.json")?;
+    trace.write_pretty(&mut file, 4)?;
     Ok(())
 }
