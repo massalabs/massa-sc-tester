@@ -13,7 +13,6 @@ use std::{collections::BTreeSet, fs, path::Path};
 use step_config::{SlotExecutionSteps, Step};
 use structopt::StructOpt;
 
-// TODO: add WASM target support
 // TODO: improve README.md
 // TODO: add step info on execution config error
 // TODO: implement storage costs
