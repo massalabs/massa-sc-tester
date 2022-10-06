@@ -1,7 +1,7 @@
 const LEDGER_PATH: &str = "./ledger.json";
 
 use anyhow::{bail, Result};
-use json::JsonValue;
+use json::{object, JsonValue};
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
@@ -15,6 +15,16 @@ pub(crate) struct Entry {
     pub(crate) balance: u64,
     pub(crate) bytecode: Vec<u8>,
     pub(crate) datastore: BTreeMap<String, Vec<u8>>,
+}
+
+impl Into<JsonValue> for Entry {
+    fn into(self) -> JsonValue {
+        object!(
+            balance: self.balance,
+            bytecode: self.bytecode,
+            datastore: self.datastore,
+        )
+    }
 }
 
 impl Entry {
@@ -124,7 +134,7 @@ impl Ord for Slot {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct AsyncMessage {
+pub(crate) struct AsyncMessage {
     pub sender_address: String,
     pub target_address: String,
     pub target_handler: String,
@@ -133,12 +143,34 @@ pub struct AsyncMessage {
     pub data: Vec<u8>,
 }
 
+impl Into<JsonValue> for AsyncMessage {
+    fn into(self) -> JsonValue {
+        object!(
+            sender_address: self.sender_address,
+            target_address: self.target_address,
+            target_handler: self.target_handler,
+            gas: self.gas,
+            coins: self.coins,
+            data: self.data,
+        )
+    }
+}
+
 type AsyncPool = BTreeMap<Slot, Vec<AsyncMessage>>;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Event {
     sender_address: String,
     data: String,
+}
+
+impl Into<JsonValue> for Event {
+    fn into(self) -> JsonValue {
+        object!(
+            sender_address: self.sender_address,
+            data: self.data
+        )
+    }
 }
 
 type EventPool = BTreeMap<Slot, Vec<Event>>;

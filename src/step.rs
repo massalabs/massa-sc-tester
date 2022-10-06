@@ -110,12 +110,12 @@ pub(crate) fn execute_step(
         }
         StepConfig::ReadEvents { start, end } => {
             let events = exec_context.get_events_in(start, end)?;
-            let json = object!(read_events: JsonValue::from(serde_json::to_string(&events)?));
+            let json = object!(read_events: JsonValue::from(events));
             trace.push(json)?;
         }
         StepConfig::ReadLedgerEntry { address } => {
             let entry = exec_context.get_entry(&address)?;
-            let json = object!(read_ledger_entry: JsonValue::from(serde_json::to_string(&entry)?));
+            let json = object!(read_ledger_entry: JsonValue::from(Some(entry)));
             trace.push(json)?;
         }
         StepConfig::WriteLedgerEntry {
@@ -135,7 +135,7 @@ pub(crate) fn execute_step(
         }
         StepConfig::ReadAsyncMessages { start, end } => {
             let msgs = exec_context.get_async_messages_in(start, end)?;
-            let json = object!(read_async_messages: JsonValue::from(serde_json::to_string(&msgs)?));
+            let json = object!(read_async_messages: JsonValue::from(msgs));
             trace.push(json)?;
         }
         StepConfig::WriteAsyncMessage {
