@@ -7,16 +7,10 @@ mod step_config;
 
 use crate::step::execute_step;
 use anyhow::{bail, Result};
-use execution_context::{ExecutionContext, Slot};
+use execution_context::ExecutionContext;
 use json::{object, JsonValue};
-use serde::Deserialize;
-use std::{
-    cmp::Ordering,
-    collections::{BTreeSet, VecDeque},
-    fs,
-    path::Path,
-};
-use step_config::StepConfig;
+use std::{collections::BTreeSet, fs, path::Path};
+use step_config::{SlotExecutionSteps, Step};
 use structopt::StructOpt;
 
 // TODO: add WASM target support
@@ -24,38 +18,6 @@ use structopt::StructOpt;
 // TODO: add step info on execution config error
 // TODO: implement storage costs
 // TODO: use massa-node cryptography
-
-#[derive(Debug, Deserialize)]
-struct Step {
-    name: String,
-    config: StepConfig,
-}
-
-#[derive(Debug, Deserialize)]
-struct SlotExecutionSteps {
-    slot: Slot,
-    execution_steps: VecDeque<Step>,
-}
-
-impl PartialOrd for SlotExecutionSteps {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.slot.partial_cmp(&other.slot)
-    }
-}
-
-impl Ord for SlotExecutionSteps {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.slot.cmp(&other.slot)
-    }
-}
-
-impl PartialEq for SlotExecutionSteps {
-    fn eq(&self, other: &Self) -> bool {
-        self.slot.eq(&other.slot)
-    }
-}
-
-impl Eq for SlotExecutionSteps {}
 
 #[derive(StructOpt)]
 struct CommandArguments {

@@ -12,9 +12,9 @@ use std::{
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Entry {
-    pub(crate) balance: u64,
-    pub(crate) bytecode: Vec<u8>,
-    pub(crate) datastore: BTreeMap<String, Vec<u8>>,
+    pub balance: u64,
+    pub bytecode: Vec<u8>,
+    pub datastore: BTreeMap<String, Vec<u8>>,
 }
 
 impl Into<JsonValue> for Entry {
@@ -159,7 +159,7 @@ impl Into<JsonValue> for AsyncMessage {
 type AsyncPool = BTreeMap<Slot, Vec<AsyncMessage>>;
 
 #[derive(Clone, Debug, Serialize)]
-pub struct Event {
+pub(crate) struct Event {
     sender_address: String,
     data: String,
 }

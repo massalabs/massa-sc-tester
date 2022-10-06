@@ -1,6 +1,9 @@
 use crate::execution_context::{CallItem, Slot};
 use serde::Deserialize;
-use std::collections::{BTreeMap, VecDeque};
+use std::{
+    cmp::Ordering,
+    collections::{BTreeMap, VecDeque},
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -67,3 +70,35 @@ pub(crate) enum StepConfig {
         data: String,
     },
 }
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Step {
+    pub name: String,
+    pub config: StepConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct SlotExecutionSteps {
+    pub slot: Slot,
+    pub execution_steps: VecDeque<Step>,
+}
+
+impl PartialOrd for SlotExecutionSteps {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.slot.partial_cmp(&other.slot)
+    }
+}
+
+impl Ord for SlotExecutionSteps {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.slot.cmp(&other.slot)
+    }
+}
+
+impl PartialEq for SlotExecutionSteps {
+    fn eq(&self, other: &Self) -> bool {
+        self.slot.eq(&other.slot)
+    }
+}
+
+impl Eq for SlotExecutionSteps {}
