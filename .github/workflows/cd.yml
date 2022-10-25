@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           mkdir massa && cd massa
-          cp -v ../target/release/massa-sc-test .
+          cp -v ../target/release/massa-sc-tester .
           cd ..
           if [[ "${{ matrix.os }}" == "windows-latest" ]]
           then
