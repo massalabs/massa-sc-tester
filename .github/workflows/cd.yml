@@ -10,52 +10,57 @@ env:
   RUST_BACKTRACE: full
 
 jobs:
-  # The 3 following build jobs are 90% copy-pasted and should be refactored using
-  # https://docs.github.com/en/actions/creating-actions/creating-a-composite-action
   release:
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            name: release_linux.tar.gz
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            name: release_windows.zip
-          - os: macOS-latest
+            name: windows
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            name: linux
+          - os: macos-latest
             target: x86_64-apple-darwin
-            name: release_macos.tar.gz
+            name: macos-amd64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: macos-arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2021-12-03
+          toolchain: nightly-2022-11-09
           target: ${{ matrix.target }}
           override: true
       - uses: Swatinem/rust-cache@v1
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
+      - name: Build
+        shell: bash
+        run: |
+          OPTS=""
+          if [[ "${{ matrix.name }}" == "macos-arm64" ]]; then
+            OPTS="--target=${{ matrix.target }}"
+          fi
+          cargo build --release $OPTS
       - name: Package
         shell: bash
         run: |
-          mkdir massa && cd massa
-          cp -v ../target/release/massa-sc-tester .
-          cd ..
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]
-          then
-            7z a ${{ matrix.name }} massa
-          else
-            tar czvf ${{ matrix.name }} massa
+          OUTPUT_DIR="target"
+          if [[ "${{ matrix.name }}" == "macos-arm64" ]]; then
+            OUTPUT_DIR="target/${{ matrix.target }}"
           fi
-          cd -
+
+          mkdir massa
+          cp ${OUTPUT_DIR}/release/massa-sc-tester massa/
+          if [[ "${{ matrix.name }}" == "windows" ]]
+          then
+            7z a release_${{ matrix.name }}.zip massa
+          else
+            tar czvf release_${{ matrix.name }}.tar.gz massa
+          fi
       - name: Publish
         uses: softprops/action-gh-release@v1
         with:
-            files: 'release_*'
+          files: "release_*"
