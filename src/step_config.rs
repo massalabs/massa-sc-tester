@@ -50,7 +50,8 @@ pub(crate) enum StepConfig {
         /// Entry balance
         balance: Option<u64>,
         /// Entry bytecode
-        bytecode: Option<Vec<u8>>,
+        // bytecode: Option<Vec<u8>>,
+        bytecode: Option<String>,
         /// Entry datastore
         datastore: Option<BTreeMap<String, Vec<u8>>>,
     },
