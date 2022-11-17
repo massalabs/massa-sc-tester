@@ -124,7 +124,6 @@ pub(crate) fn execute_step(
             bytecode,
             datastore,
         } => {
-
             let bytecode_ = match bytecode {
                 Some(bytecode) => fs::read(bytecode).ok(),
                 None => None,

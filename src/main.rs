@@ -35,11 +35,15 @@ fn main(args: CommandArguments) -> Result<()> {
         bail!("{} isn't a file", args.config_path)
     }
     let extension = path.extension().unwrap_or_default();
-    if extension != "yaml" && extension != "yml" {
-        bail!("{} extension should be .yaml or .yml", args.config_path)
-    }
     let config_slice = fs::read(path)?;
-    let executions_config: BTreeSet<SlotExecutionSteps> = serde_yaml::from_slice(&config_slice)?;
+    let executions_config: BTreeSet<SlotExecutionSteps> = match extension.to_str() {
+        Some("yaml") | Some("yml") => serde_yaml::from_slice(&config_slice)?,
+        Some("json") => serde_json::from_slice(&config_slice)?,
+        _ => bail!(
+            "{} extension should be .yaml, .yml or .json",
+            args.config_path
+        ),
+    };
 
     // execute the steps
     let mut trace = JsonValue::new_array();
