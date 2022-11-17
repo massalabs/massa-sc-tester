@@ -4,9 +4,23 @@
 
 ## Execution config
 
-The default `execution_config.json` contains an example of every available step.
+The default `execution_config.yaml` contains an example of every available step.
 
-## Running the tester
+## Running massa-sc-tester
+
+As the default execution_config.yaml uses a smart contract from massa-sc-examples, you need to build it first: 
+
+Setup:
+
+```
+git clone https://github.com/massalabs/massa-sc-tester.git
+git clone https://github.com/massalabs/massa-sc-examples.git
+cd massa-sc-examples/async-calls
+npm run build
+cd ../../massa-sc-tester
+```
+
+Run:
 
 ```
 cargo run -- execution_config.json
