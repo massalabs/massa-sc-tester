@@ -47,7 +47,7 @@
       config:
         type: read_ledger_entry
         address: X6Jqk749Dk8=
-    - name: write_new_random_async_message #
+    - name: write_new_random_async_message # send an async message
       config:
         type: write_async_message
         sender_address: X6Jqk749Dk8=

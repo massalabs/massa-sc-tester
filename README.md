@@ -8,7 +8,7 @@ The default `execution_config.yaml` contains an example of every available step.
 
 ## Running massa-sc-tester
 
-As execution_config.yaml use a smart contract from massa-sc-examples, you need to build it first: 
+As the default execution_config.yaml uses a smart contract from massa-sc-examples, you need to build it first: 
 
 Setup:
 
