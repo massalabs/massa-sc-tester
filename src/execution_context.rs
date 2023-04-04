@@ -200,7 +200,8 @@ impl ExecutionContext {
             )?,
             ledger: if let Ok(file) = std::fs::File::open(LEDGER_PATH) {
                 let reader = std::io::BufReader::new(file);
-                serde_json::from_reader(reader)?
+                let content: BTreeMap<String, Entry> = serde_json::from_reader(reader)?;
+                Arc::new(Mutex::new(Ledger(content)))
             } else {
                 Default::default()
             },
@@ -226,7 +227,8 @@ impl ExecutionContext {
         }
     }
     pub(crate) fn save(&self) -> Result<()> {
-        let str = serde_json::to_string_pretty(&self.ledger)?;
+        // NEW TODO
+        let str = serde_json::to_string_pretty(&self.ledger.lock().unwrap().0)?;
         match std::fs::write(LEDGER_PATH, str) {
             Err(error) => bail!("save lock error: {}", error),
             _ => Ok(()),

@@ -253,11 +253,12 @@ impl Interface for ExecutionContext {
     }
 
     fn hash(&self, key: &[u8]) -> Result<[u8; 32]> {
+        // NEW TODO
         let hash = [0; 32];
         let json = object!(
             hash: {
                 key: key,
-                return_value: hash.clone()
+                // return_value: hash.clone()
             }
         );
         self.update_execution_trace(json)?;
