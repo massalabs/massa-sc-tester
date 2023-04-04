@@ -53,7 +53,7 @@ pub(crate) enum StepConfig {
         // bytecode: Option<Vec<u8>>,
         bytecode: Option<String>,
         /// Entry datastore
-        datastore: Option<BTreeMap<String, Vec<u8>>>,
+        datastore: Option<BTreeMap<Vec<u8>, Vec<u8>>>,
     },
     ReadAsyncMessages {
         /// Start slot

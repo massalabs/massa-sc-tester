@@ -14,7 +14,7 @@ use std::{
 pub(crate) struct Entry {
     pub balance: u64,
     pub bytecode: Vec<u8>,
-    pub datastore: BTreeMap<String, Vec<u8>>,
+    pub datastore: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
 impl Into<JsonValue> for Entry {
@@ -31,10 +31,10 @@ impl Entry {
     pub(crate) fn get_bytecode(&self) -> Vec<u8> {
         self.bytecode.clone()
     }
-    pub(crate) fn get_data(&self, key: &str) -> Vec<u8> {
+    pub(crate) fn get_data(&self, key: &[u8]) -> Vec<u8> {
         self.datastore.get(key).cloned().unwrap_or_default()
     }
-    pub(crate) fn has_data(&self, key: &str) -> bool {
+    pub(crate) fn has_data(&self, key: &[u8]) -> bool {
         self.datastore.contains_key(key)
     }
 }
@@ -58,15 +58,15 @@ impl Ledger {
                 ..Default::default()
             });
     }
-    pub(crate) fn set_data_entry(&mut self, address: &str, key: String, value: Vec<u8>) {
+    pub(crate) fn set_data_entry(&mut self, address: &str, key: &[u8], value: &[u8]) {
         self.0
             .entry(address.to_string())
             .and_modify(|entry| {
-                entry.datastore.insert(key.clone(), value.clone());
+                entry.datastore.insert(key.to_vec(), value.to_vec());
             })
             .or_insert_with(|| {
                 let mut datastore = BTreeMap::new();
-                datastore.insert(key, value);
+                datastore.insert(key.to_vec(), value.to_vec());
                 Entry {
                     datastore,
                     ..Default::default()
@@ -261,10 +261,10 @@ impl ExecutionContext {
             Err(err) => bail!("call_stack_peek lock error: {}", err),
         }
     }
-    pub(crate) fn set_data_entry(&self, address: &str, key: &str, value: Vec<u8>) -> Result<()> {
+    pub(crate) fn set_data_entry(&self, address: &str, key: &[u8], value: &[u8]) -> Result<()> {
         match self.ledger.lock() {
             Ok(mut ledger) => {
-                ledger.set_data_entry(address, key.to_string(), value);
+                ledger.set_data_entry(address, key, value);
                 Ok(())
             }
             Err(err) => bail!("set_data_entry lock error: {}", err),
