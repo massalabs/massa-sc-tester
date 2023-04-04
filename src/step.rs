@@ -2,7 +2,7 @@ use crate::execution_context::{AsyncMessage, CallItem, Entry, ExecutionContext, 
 use crate::step_config::StepConfig;
 use anyhow::{bail, Result};
 use json::{object, JsonValue};
-use massa_sc_runtime::{run_function, run_main};
+use massa_sc_runtime::{run_function, run_main, Compiler, Response, RuntimeModule};
 use std::{fs, path::Path};
 
 pub(crate) fn execute_step(
@@ -37,22 +37,28 @@ pub(crate) fn execute_step(
             if extension != "wasm" {
                 bail!("{} extension should be .wasm", path)
             }
-            let module = fs::read(sc_path)?;
+            let bytecode = fs::read(sc_path)?;
+            let module = RuntimeModule::new(&bytecode, gas, exec_context.gas_costs, Compiler::CL)?;
 
             // execute the function
-            let (remaining_gas, function_name) = if let Some(function) = function {
+            let (Response { remaining_gas, .. }, function_name) = if let Some(function) = function {
                 (
                     run_function(
-                        &module,
-                        gas,
-                        &function,
-                        &parameter.unwrap_or_default(),
                         exec_context,
+                        module,
+                        &function,
+                        // NEW TODO
+                        &parameter.unwrap_or_default().as_bytes(),
+                        gas,
+                        exec_context.gas_costs,
                     )?,
                     function,
                 )
             } else {
-                (run_main(&module, gas, exec_context)?, "main".to_string())
+                (
+                    run_main(exec_context, module, gas, exec_context.gas_costs)?,
+                    "main".to_string(),
+                )
             };
 
             // push the function trace
@@ -80,22 +86,32 @@ pub(crate) fn execute_step(
             exec_context.execution_slot = slot;
 
             // read the bytecode
-            let bytecode = exec_context.get_entry(&address)?.get_bytecode();
+            let module = RuntimeModule::new(
+                &exec_context.get_entry(&address)?.get_bytecode(),
+                gas,
+                exec_context.gas_costs,
+                Compiler::CL,
+            )?;
 
             // execute the function
-            let (remaining_gas, function_name) = if let Some(function) = function {
+            let (Response { remaining_gas, .. }, function_name) = if let Some(function) = function {
                 (
                     run_function(
-                        &bytecode,
-                        gas,
-                        &function,
-                        &parameter.unwrap_or_default(),
                         exec_context,
+                        module,
+                        &function,
+                        // NEW TODO
+                        &parameter.unwrap_or_default().as_bytes(),
+                        gas,
+                        exec_context.gas_costs,
                     )?,
                     function,
                 )
             } else {
-                (run_main(&bytecode, gas, exec_context)?, "main".to_string())
+                (
+                    run_main(exec_context, module, gas, exec_context.gas_costs)?,
+                    "main".to_string(),
+                )
             };
 
             // push the function trace
@@ -186,15 +202,21 @@ pub(crate) fn execute_step(
         })?;
 
         // read the bytecode
-        let bytecode = exec_context.get_entry(&target_address)?.get_bytecode();
+        let module = RuntimeModule::new(
+            &exec_context.get_entry(&target_address)?.get_bytecode(),
+            gas,
+            exec_context.gas_costs,
+            Compiler::CL,
+        )?;
 
         // execute the function
-        let remaining_gas = run_function(
-            &bytecode,
-            gas,
-            &target_handler,
-            std::str::from_utf8(&data)?,
+        let Response { remaining_gas, .. } = run_function(
             exec_context,
+            module,
+            &target_handler,
+            &data,
+            gas,
+            exec_context.gas_costs,
         )?;
 
         // push the message trace

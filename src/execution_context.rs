@@ -1,12 +1,12 @@
-const LEDGER_PATH: &str = "./ledger.json";
-
 use anyhow::{bail, Result};
 use json::{object, JsonValue};
+use massa_sc_runtime::GasCosts;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
     ops::Bound,
+    path::Path,
     sync::{Arc, Mutex},
 };
 
@@ -177,6 +177,7 @@ type EventPool = BTreeMap<Slot, Vec<Event>>;
 
 #[derive(Clone)]
 pub(crate) struct ExecutionContext {
+    pub gas_costs: GasCosts,
     ledger: Arc<Mutex<Ledger>>,
     call_stack: Arc<Mutex<std::collections::VecDeque<CallItem>>>,
     owned: Arc<Mutex<std::collections::VecDeque<String>>>,
@@ -186,9 +187,17 @@ pub(crate) struct ExecutionContext {
     pub execution_slot: Slot,
 }
 
+const LEDGER_PATH: &str = "./ledger.json";
+const ABI_GAS_COSTS_PATH: &str = "./gas_costs/abi_gas_costs.json";
+const WASM_GAS_COSTS_PATH: &str = "./gas_costs/wasm_gas_costs.json";
+
 impl ExecutionContext {
     pub(crate) fn new() -> Result<ExecutionContext> {
         Ok(ExecutionContext {
+            gas_costs: GasCosts::new(
+                Path::new(ABI_GAS_COSTS_PATH).to_path_buf(),
+                Path::new(WASM_GAS_COSTS_PATH).to_path_buf(),
+            )?,
             ledger: if let Ok(file) = std::fs::File::open(LEDGER_PATH) {
                 let reader = std::io::BufReader::new(file);
                 serde_json::from_reader(reader)?
