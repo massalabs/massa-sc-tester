@@ -1,3 +1,4 @@
+#![warn(unused_crate_dependencies)]
 #![feature(btree_drain_filter)]
 
 mod execution_context;

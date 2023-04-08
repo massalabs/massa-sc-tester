@@ -2,9 +2,9 @@ use crate::execution_context::{AsyncMessage, ExecutionContext, Slot};
 
 use anyhow::{bail, Result};
 use json::object;
+use massa_hash::Hash;
 use massa_sc_runtime::{Interface, InterfaceClone};
-use std::hash::Hasher;
-use wyhash::WyHash;
+use rand::RngCore;
 
 impl InterfaceClone for ExecutionContext {
     fn clone_box(&self) -> Box<dyn Interface> {
@@ -67,17 +67,13 @@ impl Interface for ExecutionContext {
         self.call_stack_pop()
     }
 
-    /// Requires a new address that contains the sent bytecode.
-    ///
-    /// Generate a new address with a concatenation of the block_id hash, the
-    /// operation index in the block and the index of address owned in context.
-    ///
-    /// Insert in the ledger the given bytecode in the generated address
+    /// Creates a new address that contains the sent bytecode
     fn create_module(&self, module: &[u8]) -> Result<String> {
-        let mut gen = WyHash::with_seed(rand::random());
-        gen.write(&[rand::random(), rand::random(), rand::random()]);
-        // NEW TODO
-        let address = base64::encode(gen.finish().to_be_bytes());
+        let mut rbytes = [0; 128];
+        rand::thread_rng().fill_bytes(&mut rbytes);
+        let hash = Hash::compute_from(&rbytes);
+        let address = hash.to_bs58_check();
+
         self.set_module(&address, module)?;
         self.own_insert(&address)?;
         let json = object!(
@@ -253,16 +249,18 @@ impl Interface for ExecutionContext {
     }
 
     fn hash(&self, key: &[u8]) -> Result<[u8; 32]> {
-        // NEW TODO
-        let hash = [0; 32];
+        let mut rbytes = [0; 128];
+        rand::thread_rng().fill_bytes(&mut rbytes);
+        let hash = Hash::compute_from(&rbytes);
+
         let json = object!(
             hash: {
                 key: key,
-                // return_value: hash.clone()
+                return_value: hash.to_bs58_check()
             }
         );
         self.update_execution_trace(json)?;
-        Ok(hash)
+        Ok(hash.into_bytes())
     }
 
     fn raw_set_bytecode_for(&self, address: &str, bytecode: &[u8]) -> Result<()> {
