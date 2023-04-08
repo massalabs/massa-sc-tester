@@ -12,7 +12,7 @@ json = "0.12"
 indexmap = "1.9"
 rand = "0.8.4"
 wyhash = "0.5.0"
-base64 = "0"
+base64 = "0.21"
 serde = "1"
 structopt = { version = "0.3", features = ["paw"] }
 paw = "1.0"

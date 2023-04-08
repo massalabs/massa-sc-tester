@@ -38,7 +38,7 @@ pub(crate) fn execute_step(
                 bail!("{} extension should be .wasm", path)
             }
             let bytecode = fs::read(sc_path)?;
-            let module = RuntimeModule::new(&bytecode, gas, exec_context.gas_costs, Compiler::CL)?;
+            let module = RuntimeModule::new(&bytecode, gas, exec_context.gas_costs.clone(), Compiler::CL)?;
 
             // execute the function
             let (Response { remaining_gas, .. }, function_name) = if let Some(function) = function {
@@ -50,13 +50,13 @@ pub(crate) fn execute_step(
                         // NEW TODO
                         &parameter.unwrap_or_default().as_bytes(),
                         gas,
-                        exec_context.gas_costs,
+                        exec_context.gas_costs.clone(),
                     )?,
                     function,
                 )
             } else {
                 (
-                    run_main(exec_context, module, gas, exec_context.gas_costs)?,
+                    run_main(exec_context, module, gas, exec_context.gas_costs.clone())?,
                     "main".to_string(),
                 )
             };
@@ -89,7 +89,7 @@ pub(crate) fn execute_step(
             let module = RuntimeModule::new(
                 &exec_context.get_entry(&address)?.get_bytecode(),
                 gas,
-                exec_context.gas_costs,
+                exec_context.gas_costs.clone(),
                 Compiler::CL,
             )?;
 
@@ -103,13 +103,13 @@ pub(crate) fn execute_step(
                         // NEW TODO
                         &parameter.unwrap_or_default().as_bytes(),
                         gas,
-                        exec_context.gas_costs,
+                        exec_context.gas_costs.clone(),
                     )?,
                     function,
                 )
             } else {
                 (
-                    run_main(exec_context, module, gas, exec_context.gas_costs)?,
+                    run_main(exec_context, module, gas, exec_context.gas_costs.clone())?,
                     "main".to_string(),
                 )
             };
@@ -205,7 +205,7 @@ pub(crate) fn execute_step(
         let module = RuntimeModule::new(
             &exec_context.get_entry(&target_address)?.get_bytecode(),
             gas,
-            exec_context.gas_costs,
+            exec_context.gas_costs.clone(),
             Compiler::CL,
         )?;
 
@@ -216,7 +216,7 @@ pub(crate) fn execute_step(
             &target_handler,
             &data,
             gas,
-            exec_context.gas_costs,
+            exec_context.gas_costs.clone(),
         )?;
 
         // push the message trace

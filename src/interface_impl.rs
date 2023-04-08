@@ -330,7 +330,7 @@ impl Interface for ExecutionContext {
         coins: u64,
         data: &[u8],
         // NEW TODO
-        filter: Option<(&str, Option<&[u8]>)>,
+        _filter: Option<(&str, Option<&[u8]>)>,
     ) -> Result<()> {
         let sender = self.call_stack_peek()?.address;
         self.push_async_message(
