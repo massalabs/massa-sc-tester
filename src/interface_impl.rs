@@ -329,7 +329,6 @@ impl Interface for ExecutionContext {
         gas_price: u64,
         coins: u64,
         data: &[u8],
-        // NEW TODO
         _filter: Option<(&str, Option<&[u8]>)>,
     ) -> Result<()> {
         let sender = self.call_stack_peek()?.address;

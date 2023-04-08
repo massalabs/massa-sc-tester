@@ -234,11 +234,12 @@ impl ExecutionContext {
         }
     }
     pub(crate) fn save(&self) -> Result<()> {
-        // NEW TODO
-        let str = serde_json::to_string_pretty(&self.ledger.lock().unwrap().0)?;
-        match std::fs::write(LEDGER_PATH, str) {
-            Err(error) => bail!("save lock error: {}", error),
-            _ => Ok(()),
+        match self.ledger.lock() {
+            Ok(ledger) => {
+                let ser_ledger = serde_json::to_string_pretty(&ledger.0)?;
+                Ok(std::fs::write(LEDGER_PATH, ser_ledger)?)
+            }
+            Err(err) => bail!("save lock error: {}", err),
         }
     }
     pub(crate) fn call_stack_push(&self, item: CallItem) -> Result<()> {

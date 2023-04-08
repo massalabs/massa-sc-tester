@@ -38,7 +38,8 @@ pub(crate) fn execute_step(
                 bail!("{} extension should be .wasm", path)
             }
             let bytecode = fs::read(sc_path)?;
-            let module = RuntimeModule::new(&bytecode, gas, exec_context.gas_costs.clone(), Compiler::CL)?;
+            let module =
+                RuntimeModule::new(&bytecode, gas, exec_context.gas_costs.clone(), Compiler::CL)?;
 
             // execute the function
             let (Response { remaining_gas, .. }, function_name) = if let Some(function) = function {
@@ -47,8 +48,7 @@ pub(crate) fn execute_step(
                         exec_context,
                         module,
                         &function,
-                        // NEW TODO
-                        &parameter.unwrap_or_default().as_bytes(),
+                        &parameter.unwrap_or_default(),
                         gas,
                         exec_context.gas_costs.clone(),
                     )?,
@@ -100,8 +100,7 @@ pub(crate) fn execute_step(
                         exec_context,
                         module,
                         &function,
-                        // NEW TODO
-                        &parameter.unwrap_or_default().as_bytes(),
+                        &parameter.unwrap_or_default(),
                         gas,
                         exec_context.gas_costs.clone(),
                     )?,

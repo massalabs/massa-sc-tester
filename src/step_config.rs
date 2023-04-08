@@ -15,7 +15,7 @@ pub(crate) enum StepConfig {
         /// Function of the smart contract to be tested, default is 'main'
         function: Option<String>,
         /// Parameter of the given function
-        parameter: Option<String>,
+        parameter: Option<Vec<u8>>,
         /// Gas for execution
         gas: u64,
         /// ExecuteSC callstack
@@ -28,7 +28,7 @@ pub(crate) enum StepConfig {
         /// Function of the smart contract to be tested, default is 'main'
         function: Option<String>,
         /// Parameter of the given function
-        parameter: Option<String>,
+        parameter: Option<Vec<u8>>,
         /// Gas for execution
         gas: u64,
         /// CallSC callstack
