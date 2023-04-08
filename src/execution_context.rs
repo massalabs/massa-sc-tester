@@ -15,7 +15,6 @@ use std::{
 pub(crate) struct Entry {
     pub balance: u64,
     pub bytecode: Vec<u8>,
-    // TODO: to base64 string
     pub datastore: BTreeMap<String, Vec<u8>>,
 }
 
@@ -363,7 +362,7 @@ impl ExecutionContext {
         match self.async_pool.lock() {
             Ok(mut async_pool) => Ok(async_pool
                 .drain_filter(|&slot, _| slot <= self.execution_slot)
-                .flat_map(|(_, messages)| messages.clone())
+                .flat_map(|(_, messages)| messages)
                 .collect()),
             Err(err) => bail!("get_async_messages_to_execute lock error: {}", err),
         }
