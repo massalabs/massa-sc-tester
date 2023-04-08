@@ -193,7 +193,7 @@ pub(crate) struct ExecutionContext {
     pub execution_slot: Slot,
 }
 
-const LEDGER_PATH: &str = "./ledger.json";
+const LEDGER_PATH: &str = "./output/ledger.json";
 const ABI_GAS_COSTS_PATH: &str = "./gas_costs/abi_gas_costs.json";
 const WASM_GAS_COSTS_PATH: &str = "./gas_costs/wasm_gas_costs.json";
 

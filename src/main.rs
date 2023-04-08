@@ -16,6 +16,8 @@ use structopt::StructOpt;
 
 // TODO: add step info on execution config error
 
+const TRACE_PATH: &str = "./output/trace.json";
+
 #[derive(StructOpt)]
 struct CommandArguments {
     /// Path to the execution config
@@ -72,7 +74,7 @@ fn main(args: CommandArguments) -> Result<()> {
     }
 
     // write the trace
-    let mut file = fs::File::create("trace.json")?;
+    let mut file = fs::File::create(TRACE_PATH)?;
     trace.write_pretty(&mut file, 4)?;
     Ok(())
 }
