@@ -11,3 +11,7 @@ The default configuration located at `config/execution_config.yaml` contains a d
 ```
 cargo run config/execution_config.yaml
 ```
+
+## Reading the output
+
+After running a `massa-sc-tester` instance, you can read the execution trace in `trace.json` and the resulting ledger in `ledger.json`. The ledger is persistent, it will be loaded in the next execution if present. The trace will be overridden.
