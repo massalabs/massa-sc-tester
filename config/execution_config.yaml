@@ -11,9 +11,9 @@
     - name: execute_main # Execute smart contract at given path
       config:
         type: execute_sc
-        path: ../massa-sc-examples/async-calls/build/main.wasm
+        path: ./config/basic_sc.wasm
         function: main
-        parameter: ''
+        parameter: [1, 2, 3]
         gas: 100000
         call_stack:
           - address: X6Jqk749Dk8= # execute caller
@@ -22,14 +22,14 @@
       config:
         type: write_ledger_entry
         address: yvgsOkbC54I=
-        bytecode: ../massa-sc-examples/async-calls/build/smart-contract.wasm
+        bytecode: ./config/basic_sc.wasm
         balance: 876500
     - name: call_function # Call function from smart contract
       config:
         type: call_sc
         address: yvgsOkbC54I= # smart contract address
         function: receive
-        parameter: test
+        parameter: [1, 2, 3]
         gas: 100000
         call_stack:
           - address: X6Jqk749Dk8= # smart contract caller

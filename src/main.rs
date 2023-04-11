@@ -1,13 +1,15 @@
 #![warn(unused_crate_dependencies)]
 #![feature(btree_drain_filter)]
 
+mod constants;
 mod execution_context;
 mod interface_impl;
-mod step;
 mod step_config;
+mod step_manager;
 
-use crate::step::execute_step;
+use crate::step_manager::execute_step;
 use anyhow::{bail, Result};
+use constants::TRACE_PATH;
 use execution_context::ExecutionContext;
 use json::{object, JsonValue};
 use std::{collections::BTreeSet, fs, path::Path};
@@ -15,8 +17,7 @@ use step_config::{SlotExecutionSteps, Step};
 use structopt::StructOpt;
 
 // TODO: add step info on execution config error
-
-const TRACE_PATH: &str = "./output/trace.json";
+// TODO: check balance on execution config call stack
 
 #[derive(StructOpt)]
 struct CommandArguments {

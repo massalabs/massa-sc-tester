@@ -11,6 +11,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::constants::{ABI_GAS_COSTS_PATH, LEDGER_PATH, WASM_GAS_COSTS_PATH};
+
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Entry {
     pub balance: u64,
@@ -192,10 +194,6 @@ pub(crate) struct ExecutionContext {
     execution_trace: Arc<Mutex<JsonValue>>,
     pub execution_slot: Slot,
 }
-
-const LEDGER_PATH: &str = "./output/ledger.json";
-const ABI_GAS_COSTS_PATH: &str = "./gas_costs/abi_gas_costs.json";
-const WASM_GAS_COSTS_PATH: &str = "./gas_costs/wasm_gas_costs.json";
 
 impl ExecutionContext {
     pub(crate) fn new() -> Result<ExecutionContext> {
