@@ -53,9 +53,10 @@ fn main(args: CommandArguments) -> Result<()> {
         execution_steps,
     } in executions_config
     {
+        exec_context.execution_slot = slot;
         let mut slot_trace = JsonValue::new_array();
         for Step { name, config } in execution_steps {
-            let step_trace = execute_step(&mut exec_context, slot, config)?;
+            let step_trace = execute_step(&mut exec_context, config)?;
             slot_trace.push(object!(
                 execute_step: {
                     name: name,
