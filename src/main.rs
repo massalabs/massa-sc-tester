@@ -1,5 +1,6 @@
 #![warn(unused_crate_dependencies)]
 #![feature(btree_drain_filter)]
+#![allow(clippy::from_over_into)]
 
 mod constants;
 mod execution_context;
