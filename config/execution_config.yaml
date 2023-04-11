@@ -15,7 +15,7 @@
         gas: 100000
         call_stack:
           # call stack and sender addresses do not need to exist in the ledger
-          # no check is performed for the emitted coins
+          # no check is performed on the emitted coins
           - address: user_address
             coins: 8
     # save the given smart contract on the ledger
@@ -51,8 +51,9 @@
         end:
           period: 0
           thread: 1
-    # read smart contract address ledger entry
+    # read the smart contract address ledger entry
     # doing this allows to see any potential changes after calling one of the sc functions
+    # note that reading an entry usually takes a lot of space in the trace
     - name: read_sc_address
       config:
         type: read_ledger_entry
