@@ -61,12 +61,19 @@ pub(crate) enum StepConfig {
         end: Option<Slot>,
     },
     WriteAsyncMessage {
+        /// Message sender address
         sender_address: String,
+        /// Smart contract address
         target_address: String,
+        /// Smart contract function
         target_handler: String,
+        /// Slot at which the message will be executed
         execution_slot: Slot,
+        /// Execution gas
         gas: u64,
+        /// Provided coins
         coins: u64,
+        /// Smart contract function parameter
         data: Vec<u8>,
     },
 }
