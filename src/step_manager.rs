@@ -221,7 +221,7 @@ pub(crate) fn execute_step(
                 target_handler,
                 gas,
                 coins,
-                data: data.into_bytes(),
+                data,
             },
         )?,
     }

@@ -70,7 +70,7 @@
           thread: 0
         gas: 200000
         coins: 64
-        data: hello from the otherside
+        data: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     # read the async messages to be executed between (0, 0) and (4, 0)
     # we expect to see the one we created above
     - name: read_all_messages_after_steps
@@ -80,9 +80,8 @@
           period: 0
           thread: 0
         end:
-          period: 8
-          thread: 12
-
+          period: 4
+          thread: 0
 
 # slot (2, 0)
 # here the first step in the trace is the asynchronous message execution
