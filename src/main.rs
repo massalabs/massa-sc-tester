@@ -16,9 +16,6 @@ use std::{collections::BTreeSet, fs, path::Path};
 use step_config::{SlotExecutionSteps, Step};
 use structopt::StructOpt;
 
-// TODO: add step info on execution config error
-// TODO: check balance on execution config call stack
-
 #[derive(StructOpt)]
 struct CommandArguments {
     /// Path to the execution config
