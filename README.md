@@ -8,7 +8,7 @@
 
 ## Execution config
 
-The default configuration located at `config/execution_config.yaml` contains a detailed example of what you can do with `massa-sc-tester`. The `json` format is also supported if you wish to integrate `massa-sc-tester` in another application but for human interaction the `yaml` format is recommended.
+The default configuration located at `config/execution_config.yaml` contains a detailed example of what you can do with `massa-sc-tester`. The `json` format is also supported if you wish to integrate `massa-sc-tester` in another application but for human interaction `yaml` is recommended.
 
 ## Running massa-sc-tester
 
