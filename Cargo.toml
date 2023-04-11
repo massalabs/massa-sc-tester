@@ -4,15 +4,15 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-massa-sc-runtime = { git = "https://github.com/massalabs/massa-sc-runtime", tag = "v0.6.8" }
+massa-sc-runtime = { git = "https://github.com/massalabs/massa-sc-runtime", branch = "testnet_21" }
 anyhow = "1"
 serde_json = "1"
 serde_yaml = "0.9"
 json = "0.12"
-indexmap = "1.9"
 rand = "0.8.4"
-wyhash = "0.5.0"
-base64 = "0"
+base64 = "0.21"
 serde = "1"
-paw = "1.0"
 structopt = { version = "0.3", features = ["paw"] }
+paw = "1.0"
+# massa exports
+massa_hash = { git = "https://github.com/massalabs/massa", package = "massa_hash" }

@@ -1,31 +1,13 @@
 # massa-sc-tester
 
-`massa-sc-tester` is a minimal testing environment made for running massa smart contracts. This environment provides an execution config, a ledger and a trace output. The trace is an in-depth description of every step, ABI call and asynchronous messages execution.
+`massa-sc-tester` is a minimal testing environment made to run massa smart contracts. This program provides a human-readable execution trace and ledger.
 
 ## Execution config
 
-The default `execution_config` files (available in `json` and `yaml` format) contain an example of every available step.
+The default configuration located at `config/execution_config.yaml` contains a detailed example of what you can do with `massa-sc-tester`. The `json` format is also supported if you wish to integrate `massa-sc-tester` in another application but for human interaction the `yaml` format is recommended.
 
 ## Running massa-sc-tester
 
-As the default `execution_config` files use a smart contract from [`massa-sc-examples`](https://github.com/massalabs/massa-sc-examples), you need to build it first: 
-
-Setup:
-
 ```
-git clone https://github.com/massalabs/massa-sc-tester.git
-git clone https://github.com/massalabs/massa-sc-examples.git
-cd massa-sc-examples/async-calls
-npm install
-npm run build
-cd ../../massa-sc-tester
-```
-
-Run:
-
-```
-cargo run -- execution_config.json
-```
-```
-cargo run -- execution_config.yaml
+cargo run config/execution_config.yaml
 ```

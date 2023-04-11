@@ -2,9 +2,9 @@ use crate::execution_context::{AsyncMessage, ExecutionContext, Slot};
 
 use anyhow::{bail, Result};
 use json::object;
+use massa_hash::Hash;
 use massa_sc_runtime::{Interface, InterfaceClone};
-use std::hash::Hasher;
-use wyhash::WyHash;
+use rand::RngCore;
 
 impl InterfaceClone for ExecutionContext {
     fn clone_box(&self) -> Box<dyn Interface> {
@@ -67,16 +67,13 @@ impl Interface for ExecutionContext {
         self.call_stack_pop()
     }
 
-    /// Requires a new address that contains the sent bytecode.
-    ///
-    /// Generate a new address with a concatenation of the block_id hash, the
-    /// operation index in the block and the index of address owned in context.
-    ///
-    /// Insert in the ledger the given bytecode in the generated address
+    /// Creates a new address that contains the sent bytecode
     fn create_module(&self, module: &[u8]) -> Result<String> {
-        let mut gen = WyHash::with_seed(rand::random());
-        gen.write(&[rand::random(), rand::random(), rand::random()]);
-        let address = base64::encode(gen.finish().to_be_bytes());
+        let mut rbytes = [0; 128];
+        rand::thread_rng().fill_bytes(&mut rbytes);
+        let hash = Hash::compute_from(&rbytes);
+        let address = hash.to_bs58_check();
+
         self.set_module(&address, module)?;
         self.own_insert(&address)?;
         let json = object!(
@@ -90,7 +87,7 @@ impl Interface for ExecutionContext {
     }
 
     /// Requires the data at the address
-    fn raw_get_data_for(&self, address: &str, key: &str) -> Result<Vec<u8>> {
+    fn raw_get_data_for(&self, address: &str, key: &[u8]) -> Result<Vec<u8>> {
         let data = self.get(address)?.get_data(key);
         let json = object!(
             raw_get_data_for: {
@@ -107,7 +104,7 @@ impl Interface for ExecutionContext {
     ///
     /// Note:
     /// The execution lib will allways use the current context address for the update
-    fn raw_set_data_for(&self, address: &str, key: &str, value: &[u8]) -> Result<()> {
+    fn raw_set_data_for(&self, address: &str, key: &[u8], value: &[u8]) -> Result<()> {
         let curr_address = self.call_stack_peek()?.address;
         let json = object!(
             raw_set_data_for: {
@@ -118,14 +115,14 @@ impl Interface for ExecutionContext {
         );
         self.update_execution_trace(json)?;
         if self.own(address)? || *address == curr_address {
-            self.set_data_entry(address, key, value.to_vec())?;
+            self.set_data_entry(address, key, value)?;
             Ok(())
         } else {
             bail!("you do not have write access to this entry")
         }
     }
 
-    fn raw_get_data(&self, key: &str) -> Result<Vec<u8>> {
+    fn raw_get_data(&self, key: &[u8]) -> Result<Vec<u8>> {
         let data = self.get(&self.call_stack_peek()?.address)?.get_data(key);
         let json = object!(
             raw_get_data: {
@@ -137,7 +134,7 @@ impl Interface for ExecutionContext {
         Ok(data)
     }
 
-    fn raw_set_data(&self, key: &str, value: &[u8]) -> Result<()> {
+    fn raw_set_data(&self, key: &[u8], value: &[u8]) -> Result<()> {
         let json = object!(
             raw_set_data: {
                 key: key,
@@ -145,7 +142,7 @@ impl Interface for ExecutionContext {
             }
         );
         self.update_execution_trace(json)?;
-        self.set_data_entry(&self.call_stack_peek()?.address, key, value.to_vec())
+        self.set_data_entry(&self.call_stack_peek()?.address, key, value)
     }
 
     /// Transfer coins from the current address to a target address
@@ -239,7 +236,7 @@ impl Interface for ExecutionContext {
         Ok(coins)
     }
 
-    fn has_data(&self, key: &str) -> Result<bool> {
+    fn has_data(&self, key: &[u8]) -> Result<bool> {
         let ret_bool = self.get(&self.call_stack_peek()?.address)?.has_data(key);
         let json = object!(
             has_data: {
@@ -251,16 +248,19 @@ impl Interface for ExecutionContext {
         Ok(ret_bool)
     }
 
-    fn hash(&self, key: &[u8]) -> Result<String> {
-        let hash = String::from_utf8(key.to_vec())?;
+    fn hash(&self, key: &[u8]) -> Result<[u8; 32]> {
+        let mut rbytes = [0; 128];
+        rand::thread_rng().fill_bytes(&mut rbytes);
+        let hash = Hash::compute_from(&rbytes);
+
         let json = object!(
             hash: {
                 key: key,
-                return_value: hash.clone()
+                return_value: hash.to_bs58_check()
             }
         );
         self.update_execution_trace(json)?;
-        Ok(hash)
+        Ok(hash.into_bytes())
     }
 
     fn raw_set_bytecode_for(&self, address: &str, bytecode: &[u8]) -> Result<()> {
@@ -327,6 +327,7 @@ impl Interface for ExecutionContext {
         gas_price: u64,
         coins: u64,
         data: &[u8],
+        _filter: Option<(&str, Option<&[u8]>)>,
     ) -> Result<()> {
         let sender = self.call_stack_peek()?.address;
         self.push_async_message(

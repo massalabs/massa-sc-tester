@@ -1,14 +1,17 @@
-const LEDGER_PATH: &str = "./ledger.json";
-
 use anyhow::{bail, Result};
+use base64::{engine::general_purpose, Engine as _};
 use json::{object, JsonValue};
+use massa_sc_runtime::GasCosts;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
     ops::Bound,
+    path::Path,
     sync::{Arc, Mutex},
 };
+
+use crate::constants::{ABI_GAS_COSTS_PATH, LEDGER_PATH, WASM_GAS_COSTS_PATH};
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub(crate) struct Entry {
@@ -31,11 +34,19 @@ impl Entry {
     pub(crate) fn get_bytecode(&self) -> Vec<u8> {
         self.bytecode.clone()
     }
-    pub(crate) fn get_data(&self, key: &str) -> Vec<u8> {
-        self.datastore.get(key).cloned().unwrap_or_default()
+    pub(crate) fn get_data(&self, key: &[u8]) -> Vec<u8> {
+        self.datastore
+            .get(&general_purpose::STANDARD.encode(key))
+            .cloned()
+            .unwrap_or_default()
     }
-    pub(crate) fn has_data(&self, key: &str) -> bool {
-        self.datastore.contains_key(key)
+    pub(crate) fn has_data(&self, key: &[u8]) -> bool {
+        self.datastore
+            .contains_key(&general_purpose::STANDARD.encode(key))
+    }
+    pub(crate) fn insert_data(&mut self, key: &[u8], value: &[u8]) {
+        self.datastore
+            .insert(general_purpose::STANDARD.encode(key), value.to_vec());
     }
 }
 
@@ -58,19 +69,16 @@ impl Ledger {
                 ..Default::default()
             });
     }
-    pub(crate) fn set_data_entry(&mut self, address: &str, key: String, value: Vec<u8>) {
+    pub(crate) fn set_data_entry(&mut self, address: &str, key: &[u8], value: &[u8]) {
         self.0
             .entry(address.to_string())
             .and_modify(|entry| {
-                entry.datastore.insert(key.clone(), value.clone());
+                entry.insert_data(key, value);
             })
             .or_insert_with(|| {
-                let mut datastore = BTreeMap::new();
-                datastore.insert(key, value);
-                Entry {
-                    datastore,
-                    ..Default::default()
-                }
+                let mut entry = Entry::default();
+                entry.insert_data(key, value);
+                entry
             });
     }
     pub(crate) fn sub(&mut self, address: &str, amount: u64) -> Result<()> {
@@ -177,6 +185,7 @@ type EventPool = BTreeMap<Slot, Vec<Event>>;
 
 #[derive(Clone)]
 pub(crate) struct ExecutionContext {
+    pub gas_costs: GasCosts,
     ledger: Arc<Mutex<Ledger>>,
     call_stack: Arc<Mutex<std::collections::VecDeque<CallItem>>>,
     owned: Arc<Mutex<std::collections::VecDeque<String>>>,
@@ -189,9 +198,14 @@ pub(crate) struct ExecutionContext {
 impl ExecutionContext {
     pub(crate) fn new() -> Result<ExecutionContext> {
         Ok(ExecutionContext {
+            gas_costs: GasCosts::new(
+                Path::new(ABI_GAS_COSTS_PATH).to_path_buf(),
+                Path::new(WASM_GAS_COSTS_PATH).to_path_buf(),
+            )?,
             ledger: if let Ok(file) = std::fs::File::open(LEDGER_PATH) {
                 let reader = std::io::BufReader::new(file);
-                serde_json::from_reader(reader)?
+                let content: BTreeMap<String, Entry> = serde_json::from_reader(reader)?;
+                Arc::new(Mutex::new(Ledger(content)))
             } else {
                 Default::default()
             },
@@ -217,10 +231,12 @@ impl ExecutionContext {
         }
     }
     pub(crate) fn save(&self) -> Result<()> {
-        let str = serde_json::to_string_pretty(&self.ledger)?;
-        match std::fs::write(LEDGER_PATH, str) {
-            Err(error) => bail!("save lock error: {}", error),
-            _ => Ok(()),
+        match self.ledger.lock() {
+            Ok(ledger) => {
+                let ser_ledger = serde_json::to_string_pretty(&ledger.0)?;
+                Ok(std::fs::write(LEDGER_PATH, ser_ledger)?)
+            }
+            Err(err) => bail!("save lock error: {}", err),
         }
     }
     pub(crate) fn call_stack_push(&self, item: CallItem) -> Result<()> {
@@ -252,10 +268,10 @@ impl ExecutionContext {
             Err(err) => bail!("call_stack_peek lock error: {}", err),
         }
     }
-    pub(crate) fn set_data_entry(&self, address: &str, key: &str, value: Vec<u8>) -> Result<()> {
+    pub(crate) fn set_data_entry(&self, address: &str, key: &[u8], value: &[u8]) -> Result<()> {
         match self.ledger.lock() {
             Ok(mut ledger) => {
-                ledger.set_data_entry(address, key.to_string(), value);
+                ledger.set_data_entry(address, key, value);
                 Ok(())
             }
             Err(err) => bail!("set_data_entry lock error: {}", err),
@@ -344,7 +360,7 @@ impl ExecutionContext {
         match self.async_pool.lock() {
             Ok(mut async_pool) => Ok(async_pool
                 .drain_filter(|&slot, _| slot <= self.execution_slot)
-                .flat_map(|(_, messages)| messages.clone())
+                .flat_map(|(_, messages)| messages)
                 .collect()),
             Err(err) => bail!("get_async_messages_to_execute lock error: {}", err),
         }

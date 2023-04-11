@@ -1,22 +1,20 @@
+#![warn(unused_crate_dependencies)]
 #![feature(btree_drain_filter)]
 
+mod constants;
 mod execution_context;
 mod interface_impl;
-mod step;
 mod step_config;
+mod step_manager;
 
-use crate::step::execute_step;
+use crate::step_manager::execute_step;
 use anyhow::{bail, Result};
+use constants::TRACE_PATH;
 use execution_context::ExecutionContext;
 use json::{object, JsonValue};
 use std::{collections::BTreeSet, fs, path::Path};
 use step_config::{SlotExecutionSteps, Step};
 use structopt::StructOpt;
-
-// TODO: improve README.md
-// TODO: add step info on execution config error
-// TODO: implement storage costs
-// TODO: use massa-node cryptography
 
 #[derive(StructOpt)]
 struct CommandArguments {
@@ -52,9 +50,10 @@ fn main(args: CommandArguments) -> Result<()> {
         execution_steps,
     } in executions_config
     {
+        exec_context.execution_slot = slot;
         let mut slot_trace = JsonValue::new_array();
         for Step { name, config } in execution_steps {
-            let step_trace = execute_step(&mut exec_context, slot, config)?;
+            let step_trace = execute_step(&mut exec_context, config)?;
             slot_trace.push(object!(
                 execute_step: {
                     name: name,
@@ -74,7 +73,7 @@ fn main(args: CommandArguments) -> Result<()> {
     }
 
     // write the trace
-    let mut file = fs::File::create("trace.json")?;
+    let mut file = fs::File::create(TRACE_PATH)?;
     trace.write_pretty(&mut file, 4)?;
     Ok(())
 }

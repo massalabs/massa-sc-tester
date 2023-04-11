@@ -15,7 +15,7 @@ pub(crate) enum StepConfig {
         /// Function of the smart contract to be tested, default is 'main'
         function: Option<String>,
         /// Parameter of the given function
-        parameter: Option<String>,
+        parameter: Option<Vec<u8>>,
         /// Gas for execution
         gas: u64,
         /// ExecuteSC callstack
@@ -28,7 +28,7 @@ pub(crate) enum StepConfig {
         /// Function of the smart contract to be tested, default is 'main'
         function: Option<String>,
         /// Parameter of the given function
-        parameter: Option<String>,
+        parameter: Option<Vec<u8>>,
         /// Gas for execution
         gas: u64,
         /// CallSC callstack
@@ -50,7 +50,6 @@ pub(crate) enum StepConfig {
         /// Entry balance
         balance: Option<u64>,
         /// Entry bytecode
-        // bytecode: Option<Vec<u8>>,
         bytecode: Option<String>,
         /// Entry datastore
         datastore: Option<BTreeMap<String, Vec<u8>>>,
@@ -62,13 +61,20 @@ pub(crate) enum StepConfig {
         end: Option<Slot>,
     },
     WriteAsyncMessage {
+        /// Message sender address
         sender_address: String,
+        /// Smart contract address
         target_address: String,
+        /// Smart contract function
         target_handler: String,
+        /// Slot at which the message will be executed
         execution_slot: Slot,
+        /// Execution gas
         gas: u64,
+        /// Provided coins
         coins: u64,
-        data: String,
+        /// Smart contract function parameter
+        data: Vec<u8>,
     },
 }
 
