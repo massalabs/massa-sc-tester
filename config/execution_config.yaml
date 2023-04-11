@@ -29,7 +29,7 @@
         datastore:
           key1: [1, 2, 3]
           key2: [4, 5, 6]
-    # call the recive function of the previously saved smart contract
+    # call the receive function of the previously saved smart contract
     - name: call_receive_function
       config:
         type: call_sc
